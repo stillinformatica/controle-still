@@ -154,7 +154,7 @@ export default function Products() {
     setFormData({
       name: product.name,
       description: product.description || "",
-      category: product.category || "",
+      category: (product as any).category || "",
       cost: product.cost,
       salePrice: product.salePrice,
       quantity: product.quantity?.toString() || "0",
