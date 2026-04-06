@@ -3,9 +3,10 @@ import type { CreateExpressContextOptions } from "@trpc/server/adapters/express"
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL ?? "";
+const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
 
+console.log("[Auth] Supabase URL configured:", !!supabaseUrl, "Key configured:", !!supabaseServiceKey);
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export type TrpcContext = {
