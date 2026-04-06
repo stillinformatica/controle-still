@@ -122,6 +122,7 @@ export default function Products() {
     setFormData({
       name: "",
       description: "",
+      category: "",
       cost: "",
       salePrice: "",
       quantity: "0",
@@ -153,6 +154,7 @@ export default function Products() {
     setFormData({
       name: product.name,
       description: product.description || "",
+      category: product.category || "",
       cost: product.cost,
       salePrice: product.salePrice,
       quantity: product.quantity?.toString() || "0",
