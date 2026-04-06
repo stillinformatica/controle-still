@@ -40,6 +40,9 @@ export function useAuth() {
   const signInWithGoogle = useCallback(async () => {
     await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
+      extraParams: {
+        prompt: "select_account",
+      },
     });
   }, []);
 
