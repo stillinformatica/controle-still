@@ -37,6 +37,7 @@ export default defineConfig({
     ],
     fs: {
       strict: true,
+      allow: [path.resolve(import.meta.dirname, "node_modules/@lovable.dev")],
       deny: ["**/.*"],
     },
   },
