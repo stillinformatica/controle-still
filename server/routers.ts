@@ -472,6 +472,7 @@ export const appRouter = router({
       .input(z.object({
         name: z.string().min(1),
         description: z.string().optional(),
+        category: z.string().optional(),
         cost: z.string(),
         salePrice: z.string(),
         quantity: z.string().optional(),
@@ -494,6 +495,7 @@ export const appRouter = router({
         id: z.number(),
         name: z.string().optional(),
         description: z.string().optional(),
+        category: z.string().optional(),
         cost: z.string().optional(),
         salePrice: z.string().optional(),
         quantity: z.string().optional(),
