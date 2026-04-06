@@ -289,6 +289,9 @@ export default function Products() {
                           <TableCell className="font-medium">
                             <div>
                               <span className="block truncate" title={product.name}>{product.name}</span>
+                              {product.category && (
+                                <span className="text-xs text-primary font-medium">{product.category}</span>
+                              )}
                               {product.description && (
                                 <p className="text-xs text-muted-foreground truncate" title={product.description}>{product.description}</p>
                               )}
