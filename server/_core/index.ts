@@ -1,7 +1,6 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
-import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
@@ -18,23 +17,14 @@ function getCliPortArg(): number | null {
   return Number.isFinite(parsedPort) ? parsedPort : null;
 }
 
-function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise(resolve => {
-    const server = net.createServer();
-    server.listen(port, () => {
-      server.close(() => resolve(true));
-    });
-    server.on("error", () => resolve(false));
-  });
-}
+function getServerPort(): number {
+  const envPort = Number.parseInt(process.env.PORT ?? "", 10);
+  if (Number.isFinite(envPort)) return envPort;
 
-async function findAvailablePort(startPort: number = 3000): Promise<number> {
-  for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
-  }
-  throw new Error(`No available port found starting from ${startPort}`);
+  const cliPort = getCliPortArg();
+  if (cliPort !== null) return cliPort;
+
+  return 3000;
 }
 
 async function startServer() {
@@ -60,15 +50,15 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const preferredPort = getCliPortArg() ?? parseInt(process.env.PORT || "3000", 10);
-  const port = await findAvailablePort(preferredPort);
-
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
-  }
+  const port = getServerPort();
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+  });
+
+  server.on("error", error => {
+    console.error(`Failed to start server on port ${port}:`, error);
+    process.exit(1);
   });
 }
 
