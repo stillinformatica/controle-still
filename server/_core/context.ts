@@ -49,7 +49,7 @@ export async function createContext(
         });
       }
 
-      user = dbUser;
+      user = dbUser ?? null;
     }
   } catch (error) {
     console.error("[Auth] Context creation failed:", error);
