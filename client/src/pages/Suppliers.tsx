@@ -87,7 +87,7 @@ export default function Suppliers() {
     setEditingSupplier(supplier);
     setFormData({
       name: supplier.name,
-      contact: supplier.contact || "",
+      contact: "",
       phone: supplier.phone || "",
       email: supplier.email || "",
       notes: supplier.notes || "",
