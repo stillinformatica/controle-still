@@ -1,0 +1,157 @@
+{
+  "query": "SELECT t.id, t.description, t.amount, t.date, t.accountId \nFROM transactions t \nWHERE t.description LIKE 'Venda: teste%' OR t.description LIKE 'Venda: Teste%'\nORDER BY t.id DESC \nLIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user Z4v8rgvhEcHgMj9.4da899f25bfe --database cYohVG6kDdBXzZ5ngZYKYq --execute SELECT t.id, t.description, t.amount, t.date, t.accountId \nFROM transactions t \nWHERE t.description LIKE 'Venda: teste%' OR t.description LIKE 'Venda: Teste%'\nORDER BY t.id DESC \nLIMIT 30;",
+  "rows": [
+    {
+      "id": "180010",
+      "description": "Venda: teste novo - Venda teste novo",
+      "amount": "3.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "180008",
+      "description": "Venda: teste22 - Venda teste",
+      "amount": "2.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "180007",
+      "description": "Venda: teste 21 - Venda teste 21",
+      "amount": "2.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "180006",
+      "description": "Venda: teste 20 - Venda teste 20",
+      "amount": "2.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "180005",
+      "description": "Venda: teste 19 - Venda 1",
+      "amount": "1.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "180004",
+      "description": "Venda: teste 18 - Venda teste 18",
+      "amount": "2.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "180003",
+      "description": "Venda: teste17 - Venda teste",
+      "amount": "1.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "180002",
+      "description": "Venda: teste 17 - Venda 1",
+      "amount": "1.00",
+      "date": "2026-02-13",
+      "accountId": "2"
+    },
+    {
+      "id": "180001",
+      "description": "Venda: teste 16 - Venda tste 16",
+      "amount": "1.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "150001",
+      "description": "Venda: Teste 15 - Venda Teste 15",
+      "amount": "5.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "120001",
+      "description": "Venda: Teste 14 - Venda Teste 14",
+      "amount": "1.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "90007",
+      "description": "Venda: TESTE FINAL TIMEZONE - Venda Produto Teste Final",
+      "amount": "100.00",
+      "date": "2026-02-13",
+      "accountId": "150001"
+    },
+    {
+      "id": "90006",
+      "description": "Venda: teste 13 - Venda teste 13",
+      "amount": "50.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "90005",
+      "description": "Venda: teste data novo - Venda teste data nova",
+      "amount": "350.00",
+      "date": "2026-02-13",
+      "accountId": "1"
+    },
+    {
+      "id": "90004",
+      "description": "Venda: teste data - Venda teste data",
+      "amount": "450.00",
+      "date": "2026-02-13",
+      "accountId": "1"
+    },
+    {
+      "id": "90003",
+      "description": "Venda: teste agora - Venda teste agora",
+      "amount": "550.00",
+      "date": "2026-02-13",
+      "accountId": "150001"
+    },
+    {
+      "id": "90002",
+      "description": "Venda: teste agora - Venda teste agora",
+      "amount": "500.00",
+      "date": "2026-02-13",
+      "accountId": "150001"
+    },
+    {
+      "id": "90001",
+      "description": "Venda: teste - Venda tese",
+      "amount": "50.00",
+      "date": "2026-02-13",
+      "accountId": "3"
+    },
+    {
+      "id": "60002",
+      "description": "Venda: Teste 2 - Venda Teste 2",
+      "amount": "50.00",
+      "date": "2026-02-12",
+      "accountId": "2"
+    },
+    {
+      "id": "60001",
+      "description": "Venda: Teste - Venda Teste",
+      "amount": "50.00",
+      "date": "2026-02-12",
+      "accountId": "2"
+    },
+    {
+      "id": "30002",
+      "description": "Venda: Teste Data Corrigida - Venda Produto Teste Data",
+      "amount": "50.00",
+      "date": "2026-02-12",
+      "accountId": "150001"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tdescription\tamount\tdate\taccountId\n180010\tVenda: teste novo - Venda teste novo\t3.00\t2026-02-13\t3\n180008\tVenda: teste22 - Venda teste\t2.00\t2026-02-13\t3\n180007\tVenda: teste 21 - Venda teste 21\t2.00\t2026-02-13\t3\n180006\tVenda: teste 20 - Venda teste 20\t2.00\t2026-02-13\t3\n180005\tVenda: teste 19 - Venda 1\t1.00\t2026-02-13\t3\n180004\tVenda: teste 18 - Venda teste 18\t2.00\t2026-02-13\t3\n180003\tVenda: teste17 - Venda teste\t1.00\t2026-02-13\t3\n180002\tVenda: teste 17 - Venda 1\t1.00\t2026-02-13\t2\n180001\tVenda: teste 16 - Venda tste 16\t1.00\t2026-02-13\t3\n150001\tVenda: Teste 15 - Venda Teste 15\t5.00\t2026-02-13\t3\n120001\tVenda: Teste 14 - Venda Teste 14\t1.00\t2026-02-13\t3\n90007\tVenda: TESTE FINAL TIMEZONE - Venda Produto Teste Final\t100.00\t2026-02-13\t150001\n90006\tVenda: teste 13 - Venda teste 13\t50.00\t2026-02-13\t3\n90005\tVenda: teste data novo - Venda teste data nova\t350.00\t2026-02-13\t1\n90004\tVenda: teste data - Venda teste data\t450.00\t2026-02-13\t1\n90003\tVenda: teste agora - Venda teste agora\t550.00\t2026-02-13\t150001\n90002\tVenda: teste agora - Venda teste agora\t500.00\t2026-02-13\t150001\n90001\tVenda: teste - Venda tese\t50.00\t2026-02-13\t3\n60002\tVenda: Teste 2 - Venda Teste 2\t50.00\t2026-02-12\t2\n60001\tVenda: Teste - Venda Teste\t50.00\t2026-02-12\t2\n30002\tVenda: Teste Data Corrigida - Venda Produto Teste Data\t50.00\t2026-02-12\t150001\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}

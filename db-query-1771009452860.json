@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE bank_accounts ba\nSET balance = (\n  SELECT COALESCE(SUM(\n    CASE \n      WHEN t.type = 'income' THEN CAST(t.amount AS DECIMAL(15,2))\n      WHEN t.type = 'expense' THEN -CAST(t.amount AS DECIMAL(15,2))\n      ELSE 0\n    END\n  ), 0)\n  FROM transactions t\n  WHERE t.accountId = ba.id\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user Z4v8rgvhEcHgMj9.4da899f25bfe --database cYohVG6kDdBXzZ5ngZYKYq --execute UPDATE bank_accounts ba\nSET balance = (\n  SELECT COALESCE(SUM(\n    CASE \n      WHEN t.type = 'income' THEN CAST(t.amount AS DECIMAL(15,2))\n      WHEN t.type = 'expense' THEN -CAST(t.amount AS DECIMAL(15,2))\n      ELSE 0\n    END\n  ), 0)\n  FROM transactions t\n  WHERE t.accountId = ba.id\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 56
+}

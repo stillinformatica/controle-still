@@ -1,0 +1,40 @@
+{
+  "query": "SELECT id, date, customerName, description FROM sales WHERE customerName LIKE '%teste 20%' OR customerName LIKE '%teste%' ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user Z4v8rgvhEcHgMj9.4da899f25bfe --database cYohVG6kDdBXzZ5ngZYKYq --execute SELECT id, date, customerName, description FROM sales WHERE customerName LIKE '%teste 20%' OR customerName LIKE '%teste%' ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "780008",
+      "date": "2026-02-13",
+      "customerName": "teste22",
+      "description": "Venda teste"
+    },
+    {
+      "id": "780007",
+      "date": "2026-02-13",
+      "customerName": "teste 21",
+      "description": "Venda teste 21"
+    },
+    {
+      "id": "780006",
+      "date": "2026-02-13",
+      "customerName": "teste 20",
+      "description": "Venda teste 20"
+    },
+    {
+      "id": "780005",
+      "date": "2026-02-13",
+      "customerName": "teste 19",
+      "description": "Venda 1"
+    },
+    {
+      "id": "780004",
+      "date": "2026-02-13",
+      "customerName": "teste 18",
+      "description": "Venda teste 18"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tdate\tcustomerName\tdescription\n780008\t2026-02-13\tteste22\tVenda teste\n780007\t2026-02-13\tteste 21\tVenda teste 21\n780006\t2026-02-13\tteste 20\tVenda teste 20\n780005\t2026-02-13\tteste 19\tVenda 1\n780004\t2026-02-13\tteste 18\tVenda teste 18\n",
+  "stderr": "",
+  "execution_time_ms": 91
+}
