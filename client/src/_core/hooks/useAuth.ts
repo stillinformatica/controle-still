@@ -6,29 +6,31 @@ import { trpc } from "@/lib/trpc";
 
 export function useAuth() {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSupabaseUser(session?.user ?? null);
-        setLoading(false);
+        setAuthLoading(false);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSupabaseUser(session?.user ?? null);
-      setLoading(false);
+      setAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const { data: backendUser } = trpc.auth.me.useQuery(undefined, {
+  const { data: backendUser, isLoading: isBackendUserLoading, isFetching: isBackendUserFetching } = trpc.auth.me.useQuery(undefined, {
     enabled: !!supabaseUser,
     staleTime: 30_000,
     retry: false,
   });
+
+  const loading = authLoading || (!!supabaseUser && !backendUser && (isBackendUserLoading || isBackendUserFetching));
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
