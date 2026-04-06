@@ -40,9 +40,28 @@ export default function Products() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isKitDialogOpen, setIsKitDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const PRODUCT_CATEGORIES = [
+    "Eletrônicos",
+    "Segurança",
+    "Periféricos",
+    "Fontes",
+    "Gabinetes",
+    "SSDS e HDs",
+    "Kit Placa-Mãe + Processador",
+    "Placa-mãe",
+    "Processador",
+    "Computadores Montados",
+    "Notebooks Usados",
+    "Notebooks",
+    "Peças",
+    "Memórias",
+    "Placa de Vídeo",
+  ];
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    category: "",
     cost: "",
     salePrice: "",
     quantity: "0",
