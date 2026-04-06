@@ -1,0 +1,19 @@
+{
+  "query": "SELECT id, ownerId, userId, email, name, status, LEFT(inviteToken, 20) as tokenPreview FROM collaborators;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user Z4v8rgvhEcHgMj9.4da899f25bfe --database cYohVG6kDdBXzZ5ngZYKYq --execute SELECT id, ownerId, userId, email, name, status, LEFT(inviteToken, 20) as tokenPreview FROM collaborators;",
+  "rows": [
+    {
+      "id": "1",
+      "ownerId": "1",
+      "userId": "NULL",
+      "email": "emersonnds.ends@gmail.com",
+      "name": "Emerson",
+      "status": "pending",
+      "tokenPreview": "684tqki3v0wmmnu5gyj"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\townerId\tuserId\temail\tname\tstatus\ttokenPreview\n1\t1\tNULL\temersonnds.ends@gmail.com\tEmerson\tpending\t684tqki3v0wmmnu5gyj\n",
+  "stderr": "",
+  "execution_time_ms": 358
+}
