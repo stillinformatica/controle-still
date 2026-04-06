@@ -40,9 +40,28 @@ export default function Products() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isKitDialogOpen, setIsKitDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const PRODUCT_CATEGORIES = [
+    "Eletrônicos",
+    "Segurança",
+    "Periféricos",
+    "Fontes",
+    "Gabinetes",
+    "SSDS e HDs",
+    "Kit Placa-Mãe + Processador",
+    "Placa-mãe",
+    "Processador",
+    "Computadores Montados",
+    "Notebooks Usados",
+    "Notebooks",
+    "Peças",
+    "Memórias",
+    "Placa de Vídeo",
+  ];
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    category: "",
     cost: "",
     salePrice: "",
     quantity: "0",
@@ -103,6 +122,7 @@ export default function Products() {
     setFormData({
       name: "",
       description: "",
+      category: "",
       cost: "",
       salePrice: "",
       quantity: "0",
@@ -134,6 +154,7 @@ export default function Products() {
     setFormData({
       name: product.name,
       description: product.description || "",
+      category: (product as any).category || "",
       cost: product.cost,
       salePrice: product.salePrice,
       quantity: product.quantity?.toString() || "0",
@@ -268,6 +289,9 @@ export default function Products() {
                           <TableCell className="font-medium">
                             <div>
                               <span className="block truncate" title={product.name}>{product.name}</span>
+                              {(product as any).category && (
+                                <span className="text-xs text-primary font-medium">{(product as any).category}</span>
+                              )}
                               {product.description && (
                                 <p className="text-xs text-muted-foreground truncate" title={product.description}>{product.description}</p>
                               )}
@@ -381,6 +405,27 @@ export default function Products() {
                     }
                     rows={3}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="category">Categoria *</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, category: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRODUCT_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                   <div className="grid grid-cols-2 gap-4">
