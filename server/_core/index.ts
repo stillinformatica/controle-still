@@ -8,6 +8,16 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
+function getCliPortArg(): number | null {
+  const portFlagIndex = process.argv.findIndex(arg => arg === "--port");
+  if (portFlagIndex === -1) return null;
+
+  const portValue = process.argv[portFlagIndex + 1];
+  const parsedPort = Number.parseInt(portValue ?? "", 10);
+
+  return Number.isFinite(parsedPort) ? parsedPort : null;
+}
+
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
@@ -50,7 +60,7 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
+  const preferredPort = getCliPortArg() ?? parseInt(process.env.PORT || "3000", 10);
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
