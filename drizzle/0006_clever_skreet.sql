@@ -1,0 +1,1 @@
+ALTER TABLE `service_orders` MODIFY COLUMN `entryDate` date NOT NULL;

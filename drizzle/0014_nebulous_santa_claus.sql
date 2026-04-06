@@ -1,0 +1,1 @@
+ALTER TABLE `transactions` ADD `isPersonal` boolean DEFAULT false NOT NULL;

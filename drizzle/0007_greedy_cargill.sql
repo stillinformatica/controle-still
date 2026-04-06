@@ -1,0 +1,1 @@
+ALTER TABLE `services` ADD `status` enum('open','completed') DEFAULT 'open' NOT NULL;

@@ -1,0 +1,132 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1767634271351,
+      "tag": "0000_stormy_gressill",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1767634439422,
+      "tag": "0001_wonderful_owl",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1767792283168,
+      "tag": "0002_jazzy_trauma",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1767794009204,
+      "tag": "0003_calm_spirit",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1767796244787,
+      "tag": "0004_organic_the_captain",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1767799248075,
+      "tag": "0005_cheerful_tyrannus",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1767806135928,
+      "tag": "0006_clever_skreet",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1767815600488,
+      "tag": "0007_greedy_cargill",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1770669410900,
+      "tag": "0008_sweet_loa",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1770899842744,
+      "tag": "0009_amused_harrier",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1770911255516,
+      "tag": "0010_wet_runaways",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1771013706561,
+      "tag": "0011_steady_franklin_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1771015313526,
+      "tag": "0012_last_arclight",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1771082367145,
+      "tag": "0013_glorious_domino",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1773328661601,
+      "tag": "0014_nebulous_santa_claus",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "5",
+      "when": 1773329082508,
+      "tag": "0015_luxuriant_bullseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1773330306793,
+      "tag": "0016_slippery_northstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1773335933314,
+      "tag": "0017_known_malcolm_colcord",
+      "breakpoints": true
+    }
+  ]
+}
