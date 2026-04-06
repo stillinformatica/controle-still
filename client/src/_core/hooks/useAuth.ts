@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { lovable } from "@/integrations/lovable";
+import { lovable } from "@/integrations/lovable/index";
 import { useCallback, useEffect, useState } from "react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { trpc } from "@/lib/trpc";
