@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { lovable } from "@/integrations/lovable";
 import { useCallback, useEffect, useState } from "react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { trpc } from "@/lib/trpc";
@@ -8,7 +9,6 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up listener BEFORE getting session (per Supabase best practice)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSupabaseUser(session?.user ?? null);
@@ -24,7 +24,6 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch the backend user (MySQL) once we have a Supabase session
   const { data: backendUser } = trpc.auth.me.useQuery(undefined, {
     enabled: !!supabaseUser,
     staleTime: 30_000,
@@ -37,11 +36,8 @@ export function useAuth() {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin,
-      },
+    await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
     });
   }, []);
 
