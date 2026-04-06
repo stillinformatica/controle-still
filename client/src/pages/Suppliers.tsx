@@ -136,7 +136,7 @@ export default function Suppliers() {
                     {suppliers.map((supplier) => (
                       <TableRow key={supplier.id}>
                         <TableCell className="font-medium">{supplier.name}</TableCell>
-                        <TableCell>{supplier.contact || "-"}</TableCell>
+                        <TableCell>-</TableCell>
                         <TableCell>{supplier.phone || "-"}</TableCell>
                         <TableCell>{supplier.email || "-"}</TableCell>
                         <TableCell className="text-right">
