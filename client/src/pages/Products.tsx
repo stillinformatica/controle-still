@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,9 @@ export default function Products() {
   const [formData, setFormData] = useState({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0", isTesting: false });
   const [photoDialogProduct, setPhotoDialogProduct] = useState<any>(null);
   const [announcingProduct, setAnnouncingProduct] = useState<any>(null);
+  const [pendingPhotos, setPendingPhotos] = useState<File[]>([]);
+  const formFileInputRef = useRef<HTMLInputElement>(null);
+  const formCameraInputRef = useRef<HTMLInputElement>(null);
 
   const { data: products, isLoading } = useQuery({ queryKey: ["products", { isActive: true }], queryFn: () => productsApi.list({ isActive: true }), enabled: !!user });
   const testingProducts = products?.filter((p: any) => p.isTesting) || [];
@@ -40,11 +43,25 @@ export default function Products() {
   const { data: lowStockProducts } = useQuery({ queryKey: ["products", "lowStock"], queryFn: () => productsApi.getLowStock(), enabled: !!user });
   const { data: allKits } = useQuery({ queryKey: ["productKits"], queryFn: () => productKitsApi.list(), enabled: !!user });
 
-  const createMutation = useMutation({ mutationFn: productsApi.create, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto criado!"); resetForm(); }, onError: (e: any) => toast.error(e.message) });
+  const createMutation = useMutation({
+    mutationFn: productsApi.create,
+    onSuccess: async (data: any) => {
+      if (pendingPhotos.length > 0 && data?.id) {
+        for (const file of pendingPhotos) {
+          try { await productImagesApi.upload({ productId: data.id, file }); } catch (e) { console.error("Erro ao enviar foto:", e); }
+        }
+        queryClient.invalidateQueries({ queryKey: ["productImages", data.id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Produto criado!");
+      resetForm();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
   const updateMutation = useMutation({ mutationFn: productsApi.update, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto atualizado!"); resetForm(); }, onError: (e: any) => toast.error(e.message) });
   const deleteMutation = useMutation({ mutationFn: productsApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto excluído!"); }, onError: (e: any) => toast.error(e.message) });
 
-  const resetForm = () => { setFormData({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0", isTesting: false }); setEditingProduct(null); setIsDialogOpen(false); };
+  const resetForm = () => { setFormData({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0", isTesting: false }); setEditingProduct(null); setIsDialogOpen(false); setPendingPhotos([]); };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,6 +211,29 @@ export default function Products() {
                   <div className="p-4 bg-muted rounded-lg space-y-2">
                     <div className="flex justify-between"><span className="text-sm font-medium">Lucro:</span><span className="text-lg font-bold text-green-600 tabular-nums">{formatCurrency(parseFloat(formData.salePrice) - parseFloat(formData.cost))}</span></div>
                     <div className="flex justify-between"><span className="text-sm font-medium">Margem:</span><span className="text-lg font-bold text-blue-600 tabular-nums">{calculateMargin(formData.cost, formData.salePrice).toFixed(1)}%</span></div>
+                  </div>
+                )}
+                {!editingProduct && (
+                  <div className="space-y-2">
+                    <Label>Fotos do Produto</Label>
+                    <input ref={formFileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files) setPendingPhotos(prev => [...prev, ...Array.from(e.target.files!)]); if (formFileInputRef.current) formFileInputRef.current.value = ""; }} />
+                    <input ref={formCameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { if (e.target.files) setPendingPhotos(prev => [...prev, ...Array.from(e.target.files!)]); if (formCameraInputRef.current) formCameraInputRef.current.value = ""; }} />
+                    <div className="flex gap-2 flex-wrap">
+                      <Button type="button" size="sm" onClick={() => formCameraInputRef.current?.click()}><Camera className="mr-2 h-4 w-4" />Tirar Foto</Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => formFileInputRef.current?.click()}><Plus className="mr-2 h-4 w-4" />Galeria</Button>
+                    </div>
+                    {pendingPhotos.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2 mt-2">
+                        {pendingPhotos.map((file, idx) => (
+                          <div key={idx} className="relative group rounded-lg overflow-hidden border">
+                            <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-20 object-cover" />
+                            <Button type="button" variant="destructive" size="icon-sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-5 w-5" onClick={() => setPendingPhotos(prev => prev.filter((_, i) => i !== idx))}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
