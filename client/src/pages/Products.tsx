@@ -90,8 +90,8 @@ export default function Products() {
               <div className="overflow-x-auto w-full">
                 <Table className="w-full table-fixed">
                   <TableHeader><TableRow>
-                    <TableHead className="w-[35%]">Produto</TableHead><TableHead className="text-right w-[12%]">Custo</TableHead><TableHead className="text-right w-[13%]">Preço Venda</TableHead>
-                    <TableHead className="text-right w-[8%]">Qtd</TableHead><TableHead className="text-right w-[12%]">Lucro</TableHead><TableHead className="text-right w-[10%]">Margem</TableHead><TableHead className="text-right w-[10%]">Ações</TableHead>
+                    <TableHead className="w-[30%]">Produto</TableHead><TableHead className="text-right w-[10%]">Custo</TableHead><TableHead className="text-right w-[11%]">Preço Venda</TableHead>
+                    <TableHead className="text-right w-[7%]">Qtd</TableHead><TableHead className="text-right w-[10%]">Lucro</TableHead><TableHead className="text-right w-[8%]">Margem</TableHead><TableHead className="text-right w-[24%]">Ações</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
                     {products.map((product: any) => {
@@ -105,7 +105,7 @@ export default function Products() {
                           <TableCell className="text-right tabular-nums"><span className={`font-semibold ${product.minimumStock > 0 && product.quantity <= product.minimumStock ? "text-amber-600" : ""}`}>{product.quantity || 0}{product.minimumStock > 0 && product.quantity <= product.minimumStock && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />}</span></TableCell>
                           <TableCell className="text-right tabular-nums font-semibold text-green-600 text-sm">{formatCurrency(profit)}</TableCell>
                           <TableCell className="text-right tabular-nums font-semibold text-blue-600 text-sm">{margin.toFixed(1)}%</TableCell>
-                          <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
+                          <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon-sm" onClick={() => setPhotoDialogProduct(product)} title="Fotos"><Camera className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => setAnnouncingProduct(product)} title="Anunciar"><Megaphone className="h-4 w-4 text-primary" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
                         </TableRow>
                       );
                     })}
