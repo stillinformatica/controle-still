@@ -88,6 +88,7 @@ export default function Products() {
         <div className="flex justify-between items-center">
           <div><h1 className="text-3xl font-bold">Produtos</h1><p className="text-muted-foreground mt-2">Tabela de preços e margens de lucro</p></div>
           <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => setIsSyncDialogOpen(true)}><RefreshCw className="mr-2 h-4 w-4" />Sincronizar com Site</Button>
             <PriceTableExport products={products || []} kits={allKits || []} />
             <Button onClick={() => setIsDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Novo Produto</Button>
             <Button variant="outline" onClick={() => setIsKitDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Novo Kit</Button>
