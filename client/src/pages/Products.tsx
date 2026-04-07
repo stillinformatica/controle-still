@@ -186,6 +186,10 @@ export default function Products() {
                   <div className="space-y-2"><Label>Quantidade em Estoque</Label><Input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} /></div>
                   <div className="space-y-2"><Label>Estoque Mínimo</Label><Input type="number" value={formData.minimumStock} onChange={(e) => setFormData({ ...formData, minimumStock: e.target.value })} /><p className="text-xs text-muted-foreground">Alerta quando estoque ≤ este valor</p></div>
                 </div>
+                <div className="flex items-center gap-2 pt-2">
+                  <Checkbox id="is-testing" checked={formData.isTesting} onCheckedChange={(v) => setFormData({ ...formData, isTesting: !!v })} />
+                  <Label htmlFor="is-testing" className="font-normal cursor-pointer">Produto em teste (sem preço definido - exibirá "CONSULTE")</Label>
+                </div>
                 {formData.cost && formData.salePrice && (
                   <div className="p-4 bg-muted rounded-lg space-y-2">
                     <div className="flex justify-between"><span className="text-sm font-medium">Lucro:</span><span className="text-lg font-bold text-green-600 tabular-nums">{formatCurrency(parseFloat(formData.salePrice) - parseFloat(formData.cost))}</span></div>
