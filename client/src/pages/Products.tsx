@@ -563,3 +563,125 @@ function AnnounceDialog({ product, onClose }: { product: any; onClose: () => voi
     </Dialog>
   );
 }
+
+function SyncDialog({ products, onClose }: { products: any[]; onClose: () => void }) {
+  const [syncing, setSyncing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [results, setResults] = useState<{ id: number; name: string; success: boolean; error?: string }[] | null>(null);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setProgress(10);
+
+    try {
+      // Fetch images for all products
+      const productsWithImages = await Promise.all(
+        products.map(async (product: any) => {
+          try {
+            const images = await productImagesApi.list(product.id);
+            return {
+              id: product.id,
+              name: product.name,
+              description: product.description || "",
+              category: product.category || "",
+              price: product.salePrice,
+              quantity: product.quantity || 0,
+              images: images.map((img: any) => img.url),
+              isTesting: product.isTesting || false,
+            };
+          } catch {
+            return {
+              id: product.id,
+              name: product.name,
+              description: product.description || "",
+              category: product.category || "",
+              price: product.salePrice,
+              quantity: product.quantity || 0,
+              images: [],
+              isTesting: product.isTesting || false,
+            };
+          }
+        })
+      );
+
+      setProgress(40);
+
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/sync-products`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ products: productsWithImages }),
+        }
+      );
+
+      setProgress(90);
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.error || "Erro na sincronização");
+
+      setResults(result.results || []);
+      setProgress(100);
+
+      const successCount = (result.results || []).filter((r: any) => r.success).length;
+      const failCount = (result.results || []).filter((r: any) => !r.success).length;
+
+      if (failCount === 0) {
+        toast.success(`${successCount} produto(s) sincronizado(s) com sucesso!`);
+      } else {
+        toast.warning(`${successCount} sucesso, ${failCount} erro(s)`);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao sincronizar");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><RefreshCw className="h-5 w-5" />Sincronizar com o Site</DialogTitle>
+          <DialogDescription>Enviar todos os produtos para o site, atualizando fotos, estoque, preço e descrição.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="p-4 bg-muted rounded-lg space-y-2">
+            <div className="flex justify-between"><span className="text-sm">Total de produtos:</span><span className="font-bold">{products.length}</span></div>
+          </div>
+
+          {syncing && (
+            <div className="space-y-2">
+              <Progress value={progress} />
+              <p className="text-sm text-muted-foreground text-center">Sincronizando... {progress}%</p>
+            </div>
+          )}
+
+          {results && (
+            <div className="max-h-60 overflow-y-auto space-y-1">
+              {results.map((r) => (
+                <div key={r.id} className="flex items-center gap-2 text-sm p-2 rounded bg-muted/50">
+                  {r.success ? <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" /> : <XCircle className="h-4 w-4 text-destructive shrink-0" />}
+                  <span className="truncate flex-1">{r.name}</span>
+                  {r.error && <span className="text-xs text-destructive truncate max-w-[150px]">{r.error}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Fechar</Button>
+          {!results && (
+            <Button onClick={handleSync} disabled={syncing || products.length === 0}>
+              {syncing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sincronizando...</> : <><RefreshCw className="mr-2 h-4 w-4" />Sincronizar {products.length} produto(s)</>}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
