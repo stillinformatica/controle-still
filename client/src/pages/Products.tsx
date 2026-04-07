@@ -463,6 +463,7 @@ function AnnounceDialog({ product, onClose }: { product: any; onClose: () => voi
             category: product.category || "",
             price: product.salePrice,
             images: images.map((img: any) => img.url),
+            isTesting: product.isTesting || false,
           }),
         }
       );
