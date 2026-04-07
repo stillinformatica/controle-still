@@ -155,6 +155,9 @@ export default function Products() {
             <KitForm onClose={() => setIsKitDialogOpen(false)} />
           </DialogContent>
         </Dialog>
+
+        {photoDialogProduct && <PhotoDialog product={photoDialogProduct} onClose={() => setPhotoDialogProduct(null)} />}
+        {announcingProduct && <AnnounceDialog product={announcingProduct} onClose={() => setAnnouncingProduct(null)} />}
       </div>
     </DashboardLayout>
   );
