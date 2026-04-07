@@ -272,6 +272,42 @@ export const productsApi = {
   },
 };
 
+// ── Product Images ──────────────────────────────────────────────────────────
+
+export const productImagesApi = {
+  list: async (productId: number) => {
+    const data = throwIfError(
+      await supabase.from("product_images").select("*").eq("product_id", productId).order("created_at")
+    );
+    return mapKeys(data);
+  },
+  upload: async (input: { productId: number; file: File }) => {
+    const userId = await getUserId();
+    const ext = input.file.name.split(".").pop() || "jpg";
+    const path = `${userId}/${input.productId}/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(path, input.file, { contentType: input.file.type });
+    if (uploadError) throw new Error(uploadError.message);
+
+    const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
+
+    const data = throwIfError(
+      await supabase.from("product_images").insert({
+        product_id: input.productId,
+        url: urlData.publicUrl,
+        storage_path: path,
+      }).select().single()
+    );
+    return mapKeys(data);
+  },
+  delete: async (input: { id: number; storagePath: string }) => {
+    await supabase.storage.from("product-images").remove([input.storagePath]);
+    throwIfError(await supabase.from("product_images").delete().eq("id", input.id));
+  },
+};
+
 // ── Product Kits ────────────────────────────────────────────────────────────
 
 export const productKitsApi = {
