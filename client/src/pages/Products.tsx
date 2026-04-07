@@ -383,6 +383,7 @@ function KitsList() {
 function PhotoDialog({ product, onClose }: { product: any; onClose: () => void }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const { data: images = [], isLoading } = useQuery({
     queryKey: ["productImages", product.id],
