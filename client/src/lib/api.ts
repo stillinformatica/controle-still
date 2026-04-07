@@ -277,7 +277,7 @@ export const productsApi = {
 export const productImagesApi = {
   list: async (productId: number) => {
     const data = throwIfError(
-      await supabase.from("product_images").select("*").eq("product_id", productId).order("created_at")
+      await (supabase.from as any)("product_images").select("*").eq("product_id", productId).order("created_at")
     );
     return mapKeys(data);
   },
@@ -294,7 +294,7 @@ export const productImagesApi = {
     const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
 
     const data = throwIfError(
-      await supabase.from("product_images").insert({
+      await (supabase.from as any)("product_images").insert({
         product_id: input.productId,
         url: urlData.publicUrl,
         storage_path: path,
@@ -304,7 +304,7 @@ export const productImagesApi = {
   },
   delete: async (input: { id: number; storagePath: string }) => {
     await supabase.storage.from("product-images").remove([input.storagePath]);
-    throwIfError(await supabase.from("product_images").delete().eq("id", input.id));
+    throwIfError(await (supabase.from as any)("product_images").delete().eq("id", input.id));
   },
 };
 
