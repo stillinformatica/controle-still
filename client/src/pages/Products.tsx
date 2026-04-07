@@ -254,6 +254,7 @@ export default function Products() {
 
         {photoDialogProduct && <PhotoDialog product={photoDialogProduct} onClose={() => setPhotoDialogProduct(null)} />}
         {announcingProduct && <AnnounceDialog product={announcingProduct} onClose={() => setAnnouncingProduct(null)} />}
+        {isSyncDialogOpen && <SyncDialog products={products || []} onClose={() => setIsSyncDialogOpen(false)} />}
       </div>
     </DashboardLayout>
   );
