@@ -33,6 +33,9 @@ export default function Products() {
   const [formData, setFormData] = useState({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0", isTesting: false });
   const [photoDialogProduct, setPhotoDialogProduct] = useState<any>(null);
   const [announcingProduct, setAnnouncingProduct] = useState<any>(null);
+  const [pendingPhotos, setPendingPhotos] = useState<File[]>([]);
+  const formFileInputRef = useRef<HTMLInputElement>(null);
+  const formCameraInputRef = useRef<HTMLInputElement>(null);
 
   const { data: products, isLoading } = useQuery({ queryKey: ["products", { isActive: true }], queryFn: () => productsApi.list({ isActive: true }), enabled: !!user });
   const testingProducts = products?.filter((p: any) => p.isTesting) || [];
