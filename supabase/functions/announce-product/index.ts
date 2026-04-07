@@ -1,5 +1,9 @@
-import { corsHeaders } from "@supabase/supabase-js/cors";
 import { z } from "npm:zod@3.23.8";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const TARGET_PROJECT_URL = "https://zhfvxzvuegdvzufhkaqo.supabase.co";
 
