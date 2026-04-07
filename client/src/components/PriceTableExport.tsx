@@ -92,7 +92,10 @@ export default function PriceTableExport({ products, kits }: PriceTableExportPro
 
     if (activeProducts.length > 0) {
       html += `<tr><td colspan="${colCount + 1}" style="padding:6px 12px;background:#e8f0fe;font-size:11px;font-weight:700;letter-spacing:0.08em;color:#1e3a8a;text-transform:uppercase;">Produtos</td></tr>`;
-      activeProducts.forEach((p, i) => {
+      const regularProducts = activeProducts.filter(p => !p.isTesting);
+      const testProducts = activeProducts.filter(p => p.isTesting);
+
+      regularProducts.forEach((p, i) => {
         const margin = ((parseFloat(p.salePrice) - parseFloat(p.cost)) / parseFloat(p.salePrice)) * 100;
         html += `
         <tr style="background:${i % 2 === 0 ? "#f9fafb" : "#ffffff"}">
@@ -103,6 +106,20 @@ export default function PriceTableExport({ products, kits }: PriceTableExportPro
           ${showStock ? `<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${p.quantity}</td>` : ""}
         </tr>`;
       });
+
+      if (testProducts.length > 0) {
+        html += `<tr><td colspan="${colCount + 1}" style="padding:6px 12px;background:#f3e8ff;font-size:11px;font-weight:700;letter-spacing:0.08em;color:#7c3aed;text-transform:uppercase;">Em Teste</td></tr>`;
+        testProducts.forEach((p, i) => {
+          html += `
+          <tr style="background:${i % 2 === 0 ? "#faf5ff" : "#ffffff"}">
+            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${p.name}${showDescription && p.description ? `<br><small style="color:#6b7280">${p.description}</small>` : ""}</td>
+            ${showCost ? `<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">-</td>` : ""}
+            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;"><a href="https://wa.me/5511982596096?text=Olá! Gostaria de saber o preço do produto: ${encodeURIComponent(p.name)}" style="display:inline-block;padding:4px 12px;background:#25D366;color:white;border-radius:20px;font-size:11px;font-weight:700;text-decoration:none;">CONSULTE</a></td>
+            ${showCost ? `<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">-</td>` : ""}
+            ${showStock ? `<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${p.quantity}</td>` : ""}
+          </tr>`;
+        });
+      }
     }
 
     if (activeKits.length > 0) {
