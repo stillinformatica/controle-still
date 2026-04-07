@@ -213,6 +213,29 @@ export default function Products() {
                     <div className="flex justify-between"><span className="text-sm font-medium">Margem:</span><span className="text-lg font-bold text-blue-600 tabular-nums">{calculateMargin(formData.cost, formData.salePrice).toFixed(1)}%</span></div>
                   </div>
                 )}
+                {!editingProduct && (
+                  <div className="space-y-2">
+                    <Label>Fotos do Produto</Label>
+                    <input ref={formFileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files) setPendingPhotos(prev => [...prev, ...Array.from(e.target.files!)]); if (formFileInputRef.current) formFileInputRef.current.value = ""; }} />
+                    <input ref={formCameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { if (e.target.files) setPendingPhotos(prev => [...prev, ...Array.from(e.target.files!)]); if (formCameraInputRef.current) formCameraInputRef.current.value = ""; }} />
+                    <div className="flex gap-2 flex-wrap">
+                      <Button type="button" size="sm" onClick={() => formCameraInputRef.current?.click()}><Camera className="mr-2 h-4 w-4" />Tirar Foto</Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => formFileInputRef.current?.click()}><Plus className="mr-2 h-4 w-4" />Galeria</Button>
+                    </div>
+                    {pendingPhotos.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2 mt-2">
+                        {pendingPhotos.map((file, idx) => (
+                          <div key={idx} className="relative group rounded-lg overflow-hidden border">
+                            <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-20 object-cover" />
+                            <Button type="button" variant="destructive" size="icon-sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-5 w-5" onClick={() => setPendingPhotos(prev => prev.filter((_, i) => i !== idx))}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <DialogFooter><Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button><Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>{editingProduct ? "Atualizar" : "Criar"}</Button></DialogFooter>
             </form>
