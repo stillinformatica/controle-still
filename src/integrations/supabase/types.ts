@@ -459,6 +459,7 @@ export type Database = {
           description: string | null
           id: number
           is_active: boolean
+          is_testing: boolean
           minimum_stock: number
           name: string
           profit: number
@@ -475,6 +476,7 @@ export type Database = {
           description?: string | null
           id?: number
           is_active?: boolean
+          is_testing?: boolean
           minimum_stock?: number
           name: string
           profit: number
@@ -491,6 +493,7 @@ export type Database = {
           description?: string | null
           id?: number
           is_active?: boolean
+          is_testing?: boolean
           minimum_stock?: number
           name?: string
           profit?: number
