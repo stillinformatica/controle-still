@@ -86,41 +86,86 @@ export default function Products() {
 
         <Card><CardHeader><CardTitle>Kits de Produtos</CardTitle></CardHeader><CardContent><KitsList /></CardContent></Card>
 
-        <Card>
-          <CardHeader><CardTitle>Lista de Produtos</CardTitle></CardHeader>
-          <CardContent>
-            {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
-            : products && products.length > 0 ? (
-              <div className="overflow-x-auto w-full">
-                <Table className="w-full table-fixed">
-                  <TableHeader><TableRow>
-                    <TableHead className="w-[30%]">Produto</TableHead><TableHead className="text-right w-[10%]">Custo</TableHead><TableHead className="text-right w-[11%]">Preço Venda</TableHead>
-                    <TableHead className="text-right w-[7%]">Qtd</TableHead><TableHead className="text-right w-[10%]">Lucro</TableHead><TableHead className="text-right w-[8%]">Margem</TableHead><TableHead className="text-right w-[24%]">Ações</TableHead>
-                  </TableRow></TableHeader>
-                  <TableBody>
-                    {products.map((product: any) => {
-                      const profit = calculateProfit(product.cost, product.salePrice);
-                      const margin = calculateMargin(product.cost, product.salePrice);
-                      return (
-                        <TableRow key={product.id}>
-                          <TableCell className="font-medium"><div><span className="block truncate" title={product.name}>{product.name}</span>{product.category && <span className="text-xs text-primary font-medium">{product.category}</span>}{product.description && <p className="text-xs text-muted-foreground truncate">{product.description}</p>}</div></TableCell>
-                          <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.cost)}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.salePrice)}</TableCell>
-                          <TableCell className="text-right tabular-nums"><span className={`font-semibold ${product.minimumStock > 0 && product.quantity <= product.minimumStock ? "text-amber-600" : ""}`}>{product.quantity || 0}{product.minimumStock > 0 && product.quantity <= product.minimumStock && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />}</span></TableCell>
-                          <TableCell className="text-right tabular-nums font-semibold text-green-600 text-sm">{formatCurrency(profit)}</TableCell>
-                          <TableCell className="text-right tabular-nums font-semibold text-blue-600 text-sm">{margin.toFixed(1)}%</TableCell>
-                          <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon-sm" onClick={() => setPhotoDialogProduct(product)} title="Fotos"><Camera className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => setAnnouncingProduct(product)} title="Anunciar"><Megaphone className="h-4 w-4 text-primary" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12"><Package className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground text-center">Nenhum produto cadastrado.</p></div>
-            )}
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="products">
+          <TabsList>
+            <TabsTrigger value="products">Produtos ({regularProducts.length})</TabsTrigger>
+            <TabsTrigger value="testing"><FlaskConical className="h-4 w-4 mr-1" />Em Teste ({testingProducts.length})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="products">
+            <Card>
+              <CardHeader><CardTitle>Lista de Produtos</CardTitle></CardHeader>
+              <CardContent>
+                {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
+                : regularProducts.length > 0 ? (
+                  <div className="overflow-x-auto w-full">
+                    <Table className="w-full table-fixed">
+                      <TableHeader><TableRow>
+                        <TableHead className="w-[30%]">Produto</TableHead><TableHead className="text-right w-[10%]">Custo</TableHead><TableHead className="text-right w-[11%]">Preço Venda</TableHead>
+                        <TableHead className="text-right w-[7%]">Qtd</TableHead><TableHead className="text-right w-[10%]">Lucro</TableHead><TableHead className="text-right w-[8%]">Margem</TableHead><TableHead className="text-right w-[24%]">Ações</TableHead>
+                      </TableRow></TableHeader>
+                      <TableBody>
+                        {regularProducts.map((product: any) => {
+                          const profit = calculateProfit(product.cost, product.salePrice);
+                          const margin = calculateMargin(product.cost, product.salePrice);
+                          return (
+                            <TableRow key={product.id}>
+                              <TableCell className="font-medium"><div><span className="block truncate" title={product.name}>{product.name}</span>{product.category && <span className="text-xs text-primary font-medium">{product.category}</span>}{product.description && <p className="text-xs text-muted-foreground truncate">{product.description}</p>}</div></TableCell>
+                              <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.cost)}</TableCell>
+                              <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.salePrice)}</TableCell>
+                              <TableCell className="text-right tabular-nums"><span className={`font-semibold ${product.minimumStock > 0 && product.quantity <= product.minimumStock ? "text-amber-600" : ""}`}>{product.quantity || 0}{product.minimumStock > 0 && product.quantity <= product.minimumStock && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />}</span></TableCell>
+                              <TableCell className="text-right tabular-nums font-semibold text-green-600 text-sm">{formatCurrency(profit)}</TableCell>
+                              <TableCell className="text-right tabular-nums font-semibold text-blue-600 text-sm">{margin.toFixed(1)}%</TableCell>
+                              <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon-sm" onClick={() => setPhotoDialogProduct(product)} title="Fotos"><Camera className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => setAnnouncingProduct(product)} title="Anunciar"><Megaphone className="h-4 w-4 text-primary" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12"><Package className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground text-center">Nenhum produto cadastrado.</p></div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="testing">
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5" />Produtos em Teste</CardTitle></CardHeader>
+              <CardContent>
+                {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
+                : testingProducts.length > 0 ? (
+                  <div className="overflow-x-auto w-full">
+                    <Table className="w-full table-fixed">
+                      <TableHeader><TableRow>
+                        <TableHead className="w-[35%]">Produto</TableHead><TableHead className="text-right w-[10%]">Custo</TableHead>
+                        <TableHead className="text-right w-[10%]">Qtd</TableHead><TableHead className="text-center w-[20%]">Preço</TableHead><TableHead className="text-right w-[25%]">Ações</TableHead>
+                      </TableRow></TableHeader>
+                      <TableBody>
+                        {testingProducts.map((product: any) => (
+                          <TableRow key={product.id}>
+                            <TableCell className="font-medium"><div><span className="block truncate" title={product.name}>{product.name}</span>{product.category && <span className="text-xs text-primary font-medium">{product.category}</span>}{product.description && <p className="text-xs text-muted-foreground truncate">{product.description}</p>}</div></TableCell>
+                            <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.cost)}</TableCell>
+                            <TableCell className="text-right tabular-nums">{product.quantity || 0}</TableCell>
+                            <TableCell className="text-center">
+                              <a href="https://wa.me/5511982596096" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">
+                                CONSULTE
+                              </a>
+                            </TableCell>
+                            <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon-sm" onClick={() => setPhotoDialogProduct(product)} title="Fotos"><Camera className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => setAnnouncingProduct(product)} title="Anunciar"><Megaphone className="h-4 w-4 text-primary" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12"><FlaskConical className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground text-center">Nenhum produto em teste.</p></div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
           <DialogContent>
