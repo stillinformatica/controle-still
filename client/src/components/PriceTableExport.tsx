@@ -19,6 +19,7 @@ interface Product {
   salePrice: string;
   cost: string;
   quantity: number;
+  isTesting?: boolean;
 }
 
 interface Kit {
