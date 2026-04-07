@@ -9,10 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { productsApi, productKitsApi, bankAccountsApi } from "@/lib/api";
+import { productsApi, productKitsApi, bankAccountsApi, productImagesApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React from "react";
-import { Plus, Package, Trash2, Edit, ShoppingCart, X, AlertTriangle } from "lucide-react";
+import { Plus, Package, Trash2, Edit, ShoppingCart, X, AlertTriangle, Camera, Megaphone, Loader2 } from "lucide-react";
 import PriceTableExport from "@/components/PriceTableExport";
 import { toast } from "sonner";
 
