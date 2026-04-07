@@ -232,8 +232,8 @@ export const productsApi = {
   },
   create: async (input: any) => {
     const userId = await getUserId();
-    const cost = parseFloat(input.cost);
-    const salePrice = parseFloat(input.salePrice);
+    const cost = parseFloat(input.cost) || 0;
+    const salePrice = parseFloat(input.salePrice) || 0;
     const profit = salePrice - cost;
     const profitMargin = salePrice > 0 ? (profit / salePrice) * 100 : 0;
     const data = throwIfError(
@@ -241,6 +241,7 @@ export const productsApi = {
         user_id: userId, name: input.name, description: input.description || null,
         category: input.category || null, cost, sale_price: salePrice, profit, profit_margin: profitMargin,
         quantity: parseInt(input.quantity) || 0, minimum_stock: parseInt(input.minimumStock) || 0,
+        is_testing: input.isTesting || false,
       }).select().single()
     );
     return mapKeys(data);
@@ -261,6 +262,7 @@ export const productsApi = {
     }
     if (input.quantity !== undefined) updates.quantity = parseInt(input.quantity);
     if (input.minimumStock !== undefined) updates.minimum_stock = parseInt(input.minimumStock);
+    if (input.isTesting !== undefined) updates.is_testing = input.isTesting;
     const data = throwIfError(
       await supabase.from("products").update(updates).eq("id", input.id).eq("user_id", userId).select().single()
     );
