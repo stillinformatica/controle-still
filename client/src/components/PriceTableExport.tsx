@@ -193,6 +193,9 @@ export default function PriceTableExport({ products, kits }: PriceTableExportPro
     const headers = ["Tipo", "Item", showDescription ? "Descrição" : null, showCost ? "Custo (R$)" : null, "Preço de Venda (R$)", showCost ? "Margem (%)" : null, showStock ? "Estoque" : null].filter(Boolean).join(";");
 
     const productRows = activeProducts.map((p) => {
+      if (p.isTesting) {
+        return ["Produto (Teste)", `"${p.name}"`, showDescription ? `"${p.description || ""}"` : null, showCost ? "-" : null, "CONSULTE", showCost ? "-" : null, showStock ? p.quantity : null].filter((v) => v !== null).join(";");
+      }
       const margin = ((parseFloat(p.salePrice) - parseFloat(p.cost)) / parseFloat(p.salePrice)) * 100;
       return ["Produto", `"${p.name}"`, showDescription ? `"${p.description || ""}"` : null, showCost ? parseFloat(p.cost).toFixed(2).replace(".", ",") : null, parseFloat(p.salePrice).toFixed(2).replace(".", ","), showCost ? margin.toFixed(1).replace(".", ",") : null, showStock ? p.quantity : null].filter((v) => v !== null).join(";");
     });
