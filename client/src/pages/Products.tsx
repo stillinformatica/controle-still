@@ -326,3 +326,129 @@ function KitsList() {
     </>
   );
 }
+
+function PhotoDialog({ product, onClose }: { product: any; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: images = [], isLoading } = useQuery({
+    queryKey: ["productImages", product.id],
+    queryFn: () => productImagesApi.list(product.id),
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => productImagesApi.upload({ productId: product.id, file }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productImages", product.id] }); toast.success("Foto adicionada!"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (img: any) => productImagesApi.delete({ id: img.id, storagePath: img.storagePath }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productImages", product.id] }); toast.success("Foto removida!"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) Array.from(files).forEach(f => uploadMutation.mutate(f));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Fotos - {product.name}</DialogTitle>
+          <DialogDescription>Gerencie as fotos do produto</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+          <Button onClick={() => fileInputRef.current?.click()} disabled={uploadMutation.isPending}>
+            {uploadMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Camera className="mr-2 h-4 w-4" />Adicionar Fotos</>}
+          </Button>
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : images.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Nenhuma foto adicionada.</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              {images.map((img: any) => (
+                <div key={img.id} className="relative group rounded-lg overflow-hidden border">
+                  <img src={img.url} alt={product.name} className="w-full h-32 object-cover" />
+                  <Button variant="destructive" size="icon-sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteMutation.mutate(img)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AnnounceDialog({ product, onClose }: { product: any; onClose: () => void }) {
+  const [sending, setSending] = useState(false);
+  const { data: images = [] } = useQuery({
+    queryKey: ["productImages", product.id],
+    queryFn: () => productImagesApi.list(product.id),
+  });
+
+  const handleAnnounce = async () => {
+    setSending(true);
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/announce-product`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+          body: JSON.stringify({
+            name: product.name,
+            description: product.description || "",
+            category: product.category || "",
+            price: product.salePrice,
+            images: images.map((img: any) => img.url),
+          }),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Erro ao anunciar");
+      toast.success("Produto anunciado com sucesso!");
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao anunciar produto");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Anunciar Produto</DialogTitle>
+          <DialogDescription>Enviar "{product.name}" para o site de vendas</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="p-4 bg-muted rounded-lg space-y-2">
+            <div className="flex justify-between"><span className="text-sm">Nome:</span><span className="font-medium">{product.name}</span></div>
+            {product.category && <div className="flex justify-between"><span className="text-sm">Categoria:</span><span className="font-medium">{product.category}</span></div>}
+            <div className="flex justify-between"><span className="text-sm">Preço:</span><span className="font-bold text-primary tabular-nums">R$ {parseFloat(product.salePrice).toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-sm">Fotos:</span><span className="font-medium">{images.length} foto(s)</span></div>
+          </div>
+          {images.length === 0 && (
+            <p className="text-sm text-amber-600 flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Recomendamos adicionar fotos antes de anunciar.</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleAnnounce} disabled={sending}>
+            {sending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Megaphone className="mr-2 h-4 w-4" />Anunciar</>}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
