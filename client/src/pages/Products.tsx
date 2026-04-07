@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { productsApi, productKitsApi, bankAccountsApi, productImagesApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React from "react";
-import { Plus, Package, Trash2, Edit, ShoppingCart, X, AlertTriangle, Camera, Megaphone, Loader2 } from "lucide-react";
+import { Plus, Package, Trash2, Edit, ShoppingCart, X, AlertTriangle, Camera, Megaphone, Loader2, FlaskConical } from "lucide-react";
 import PriceTableExport from "@/components/PriceTableExport";
 import { toast } from "sonner";
 
@@ -28,11 +30,13 @@ export default function Products() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isKitDialogOpen, setIsKitDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [formData, setFormData] = useState({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0" });
+  const [formData, setFormData] = useState({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0", isTesting: false });
   const [photoDialogProduct, setPhotoDialogProduct] = useState<any>(null);
   const [announcingProduct, setAnnouncingProduct] = useState<any>(null);
 
   const { data: products, isLoading } = useQuery({ queryKey: ["products", { isActive: true }], queryFn: () => productsApi.list({ isActive: true }), enabled: !!user });
+  const testingProducts = products?.filter((p: any) => p.isTesting) || [];
+  const regularProducts = products?.filter((p: any) => !p.isTesting) || [];
   const { data: lowStockProducts } = useQuery({ queryKey: ["products", "lowStock"], queryFn: () => productsApi.getLowStock(), enabled: !!user });
   const { data: allKits } = useQuery({ queryKey: ["productKits"], queryFn: () => productKitsApi.list(), enabled: !!user });
 
@@ -40,7 +44,7 @@ export default function Products() {
   const updateMutation = useMutation({ mutationFn: productsApi.update, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto atualizado!"); resetForm(); }, onError: (e: any) => toast.error(e.message) });
   const deleteMutation = useMutation({ mutationFn: productsApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto excluído!"); }, onError: (e: any) => toast.error(e.message) });
 
-  const resetForm = () => { setFormData({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0" }); setEditingProduct(null); setIsDialogOpen(false); };
+  const resetForm = () => { setFormData({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0", isTesting: false }); setEditingProduct(null); setIsDialogOpen(false); };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +54,7 @@ export default function Products() {
 
   const handleEdit = (product: any) => {
     setEditingProduct(product);
-    setFormData({ name: product.name, description: product.description || "", category: product.category || "", cost: product.cost, salePrice: product.salePrice, quantity: product.quantity?.toString() || "0", minimumStock: product.minimumStock?.toString() || "0" });
+    setFormData({ name: product.name, description: product.description || "", category: product.category || "", cost: product.cost, salePrice: product.salePrice, quantity: product.quantity?.toString() || "0", minimumStock: product.minimumStock?.toString() || "0", isTesting: product.isTesting || false });
     setIsDialogOpen(true);
   };
 
@@ -82,41 +86,86 @@ export default function Products() {
 
         <Card><CardHeader><CardTitle>Kits de Produtos</CardTitle></CardHeader><CardContent><KitsList /></CardContent></Card>
 
-        <Card>
-          <CardHeader><CardTitle>Lista de Produtos</CardTitle></CardHeader>
-          <CardContent>
-            {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
-            : products && products.length > 0 ? (
-              <div className="overflow-x-auto w-full">
-                <Table className="w-full table-fixed">
-                  <TableHeader><TableRow>
-                    <TableHead className="w-[30%]">Produto</TableHead><TableHead className="text-right w-[10%]">Custo</TableHead><TableHead className="text-right w-[11%]">Preço Venda</TableHead>
-                    <TableHead className="text-right w-[7%]">Qtd</TableHead><TableHead className="text-right w-[10%]">Lucro</TableHead><TableHead className="text-right w-[8%]">Margem</TableHead><TableHead className="text-right w-[24%]">Ações</TableHead>
-                  </TableRow></TableHeader>
-                  <TableBody>
-                    {products.map((product: any) => {
-                      const profit = calculateProfit(product.cost, product.salePrice);
-                      const margin = calculateMargin(product.cost, product.salePrice);
-                      return (
-                        <TableRow key={product.id}>
-                          <TableCell className="font-medium"><div><span className="block truncate" title={product.name}>{product.name}</span>{product.category && <span className="text-xs text-primary font-medium">{product.category}</span>}{product.description && <p className="text-xs text-muted-foreground truncate">{product.description}</p>}</div></TableCell>
-                          <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.cost)}</TableCell>
-                          <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.salePrice)}</TableCell>
-                          <TableCell className="text-right tabular-nums"><span className={`font-semibold ${product.minimumStock > 0 && product.quantity <= product.minimumStock ? "text-amber-600" : ""}`}>{product.quantity || 0}{product.minimumStock > 0 && product.quantity <= product.minimumStock && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />}</span></TableCell>
-                          <TableCell className="text-right tabular-nums font-semibold text-green-600 text-sm">{formatCurrency(profit)}</TableCell>
-                          <TableCell className="text-right tabular-nums font-semibold text-blue-600 text-sm">{margin.toFixed(1)}%</TableCell>
-                          <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon-sm" onClick={() => setPhotoDialogProduct(product)} title="Fotos"><Camera className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => setAnnouncingProduct(product)} title="Anunciar"><Megaphone className="h-4 w-4 text-primary" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12"><Package className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground text-center">Nenhum produto cadastrado.</p></div>
-            )}
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="products">
+          <TabsList>
+            <TabsTrigger value="products">Produtos ({regularProducts.length})</TabsTrigger>
+            <TabsTrigger value="testing"><FlaskConical className="h-4 w-4 mr-1" />Em Teste ({testingProducts.length})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="products">
+            <Card>
+              <CardHeader><CardTitle>Lista de Produtos</CardTitle></CardHeader>
+              <CardContent>
+                {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
+                : regularProducts.length > 0 ? (
+                  <div className="overflow-x-auto w-full">
+                    <Table className="w-full table-fixed">
+                      <TableHeader><TableRow>
+                        <TableHead className="w-[30%]">Produto</TableHead><TableHead className="text-right w-[10%]">Custo</TableHead><TableHead className="text-right w-[11%]">Preço Venda</TableHead>
+                        <TableHead className="text-right w-[7%]">Qtd</TableHead><TableHead className="text-right w-[10%]">Lucro</TableHead><TableHead className="text-right w-[8%]">Margem</TableHead><TableHead className="text-right w-[24%]">Ações</TableHead>
+                      </TableRow></TableHeader>
+                      <TableBody>
+                        {regularProducts.map((product: any) => {
+                          const profit = calculateProfit(product.cost, product.salePrice);
+                          const margin = calculateMargin(product.cost, product.salePrice);
+                          return (
+                            <TableRow key={product.id}>
+                              <TableCell className="font-medium"><div><span className="block truncate" title={product.name}>{product.name}</span>{product.category && <span className="text-xs text-primary font-medium">{product.category}</span>}{product.description && <p className="text-xs text-muted-foreground truncate">{product.description}</p>}</div></TableCell>
+                              <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.cost)}</TableCell>
+                              <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.salePrice)}</TableCell>
+                              <TableCell className="text-right tabular-nums"><span className={`font-semibold ${product.minimumStock > 0 && product.quantity <= product.minimumStock ? "text-amber-600" : ""}`}>{product.quantity || 0}{product.minimumStock > 0 && product.quantity <= product.minimumStock && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />}</span></TableCell>
+                              <TableCell className="text-right tabular-nums font-semibold text-green-600 text-sm">{formatCurrency(profit)}</TableCell>
+                              <TableCell className="text-right tabular-nums font-semibold text-blue-600 text-sm">{margin.toFixed(1)}%</TableCell>
+                              <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon-sm" onClick={() => setPhotoDialogProduct(product)} title="Fotos"><Camera className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => setAnnouncingProduct(product)} title="Anunciar"><Megaphone className="h-4 w-4 text-primary" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12"><Package className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground text-center">Nenhum produto cadastrado.</p></div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="testing">
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5" />Produtos em Teste</CardTitle></CardHeader>
+              <CardContent>
+                {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
+                : testingProducts.length > 0 ? (
+                  <div className="overflow-x-auto w-full">
+                    <Table className="w-full table-fixed">
+                      <TableHeader><TableRow>
+                        <TableHead className="w-[35%]">Produto</TableHead><TableHead className="text-right w-[10%]">Custo</TableHead>
+                        <TableHead className="text-right w-[10%]">Qtd</TableHead><TableHead className="text-center w-[20%]">Preço</TableHead><TableHead className="text-right w-[25%]">Ações</TableHead>
+                      </TableRow></TableHeader>
+                      <TableBody>
+                        {testingProducts.map((product: any) => (
+                          <TableRow key={product.id}>
+                            <TableCell className="font-medium"><div><span className="block truncate" title={product.name}>{product.name}</span>{product.category && <span className="text-xs text-primary font-medium">{product.category}</span>}{product.description && <p className="text-xs text-muted-foreground truncate">{product.description}</p>}</div></TableCell>
+                            <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.cost)}</TableCell>
+                            <TableCell className="text-right tabular-nums">{product.quantity || 0}</TableCell>
+                            <TableCell className="text-center">
+                              <a href="https://wa.me/5511982596096" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">
+                                CONSULTE
+                              </a>
+                            </TableCell>
+                            <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon-sm" onClick={() => setPhotoDialogProduct(product)} title="Fotos"><Camera className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => setAnnouncingProduct(product)} title="Anunciar"><Megaphone className="h-4 w-4 text-primary" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12"><FlaskConical className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground text-center">Nenhum produto em teste.</p></div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
           <DialogContent>
@@ -136,6 +185,10 @@ export default function Products() {
                   <div className="space-y-2"><Label>Preço de Venda *</Label><Input type="number" step="0.01" value={formData.salePrice} onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })} required /></div>
                   <div className="space-y-2"><Label>Quantidade em Estoque</Label><Input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} /></div>
                   <div className="space-y-2"><Label>Estoque Mínimo</Label><Input type="number" value={formData.minimumStock} onChange={(e) => setFormData({ ...formData, minimumStock: e.target.value })} /><p className="text-xs text-muted-foreground">Alerta quando estoque ≤ este valor</p></div>
+                </div>
+                <div className="flex items-center gap-2 pt-2">
+                  <Checkbox id="is-testing" checked={formData.isTesting} onCheckedChange={(v) => setFormData({ ...formData, isTesting: !!v })} />
+                  <Label htmlFor="is-testing" className="font-normal cursor-pointer">Produto em teste (sem preço definido - exibirá "CONSULTE")</Label>
                 </div>
                 {formData.cost && formData.salePrice && (
                   <div className="p-4 bg-muted rounded-lg space-y-2">
@@ -410,6 +463,7 @@ function AnnounceDialog({ product, onClose }: { product: any; onClose: () => voi
             category: product.category || "",
             price: product.salePrice,
             images: images.map((img: any) => img.url),
+            isTesting: product.isTesting || false,
           }),
         }
       );

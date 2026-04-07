@@ -13,6 +13,7 @@ const BodySchema = z.object({
   category: z.string().default(""),
   price: z.union([z.string(), z.number()]).transform((v) => Number(v)),
   images: z.array(z.string()).default([]),
+  isTesting: z.boolean().default(false),
 });
 
 Deno.serve(async (req) => {
