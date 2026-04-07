@@ -61,7 +61,7 @@ export default function Products() {
   const updateMutation = useMutation({ mutationFn: productsApi.update, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto atualizado!"); resetForm(); }, onError: (e: any) => toast.error(e.message) });
   const deleteMutation = useMutation({ mutationFn: productsApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto excluído!"); }, onError: (e: any) => toast.error(e.message) });
 
-  const resetForm = () => { setFormData({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0", isTesting: false }); setEditingProduct(null); setIsDialogOpen(false); };
+  const resetForm = () => { setFormData({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0", isTesting: false }); setEditingProduct(null); setIsDialogOpen(false); setPendingPhotos([]); };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
