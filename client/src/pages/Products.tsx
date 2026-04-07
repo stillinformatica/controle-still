@@ -29,6 +29,8 @@ export default function Products() {
   const [isKitDialogOpen, setIsKitDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [formData, setFormData] = useState({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0" });
+  const [photoDialogProduct, setPhotoDialogProduct] = useState<any>(null);
+  const [announcingProduct, setAnnouncingProduct] = useState<any>(null);
 
   const { data: products, isLoading } = useQuery({ queryKey: ["products", { isActive: true }], queryFn: () => productsApi.list({ isActive: true }), enabled: !!user });
   const { data: lowStockProducts } = useQuery({ queryKey: ["products", "lowStock"], queryFn: () => productsApi.getLowStock(), enabled: !!user });
