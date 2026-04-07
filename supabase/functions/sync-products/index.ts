@@ -1,4 +1,5 @@
 import { z } from "npm:zod@3.23.8";
+import { createClient } from "npm:@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,7 +38,9 @@ Deno.serve(async (req) => {
     }
 
     const { products } = parsed.data;
-    const results: { id: number; name: string; success: boolean; error?: string }[] = [];
+    const results: { id: number; name: string; success: boolean; action?: string; error?: string }[] = [];
+
+    const targetAnonKey = Deno.env.get("TARGET_SITE_ANON_KEY") || "";
 
     for (const product of products) {
       try {
@@ -45,7 +48,7 @@ Deno.serve(async (req) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${Deno.env.get("TARGET_SITE_ANON_KEY") || ""}`,
+            Authorization: `Bearer ${targetAnonKey}`,
           },
           body: JSON.stringify({
             id: product.id,
@@ -56,6 +59,7 @@ Deno.serve(async (req) => {
             quantity: product.quantity,
             images: product.images,
             isTesting: product.isTesting,
+            upsert: true,
           }),
         });
 
@@ -63,7 +67,8 @@ Deno.serve(async (req) => {
           const errorText = await response.text().catch(() => "");
           results.push({ id: product.id, name: product.name, success: false, error: errorText || `Status ${response.status}` });
         } else {
-          results.push({ id: product.id, name: product.name, success: true });
+          const data = await response.json().catch(() => ({}));
+          results.push({ id: product.id, name: product.name, success: true, action: data.action || "synced" });
         }
       } catch (e) {
         results.push({ id: product.id, name: product.name, success: false, error: e instanceof Error ? e.message : "Erro desconhecido" });
