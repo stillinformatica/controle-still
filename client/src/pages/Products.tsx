@@ -30,11 +30,13 @@ export default function Products() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isKitDialogOpen, setIsKitDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [formData, setFormData] = useState({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0" });
+  const [formData, setFormData] = useState({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0", isTesting: false });
   const [photoDialogProduct, setPhotoDialogProduct] = useState<any>(null);
   const [announcingProduct, setAnnouncingProduct] = useState<any>(null);
 
   const { data: products, isLoading } = useQuery({ queryKey: ["products", { isActive: true }], queryFn: () => productsApi.list({ isActive: true }), enabled: !!user });
+  const testingProducts = products?.filter((p: any) => p.isTesting) || [];
+  const regularProducts = products?.filter((p: any) => !p.isTesting) || [];
   const { data: lowStockProducts } = useQuery({ queryKey: ["products", "lowStock"], queryFn: () => productsApi.getLowStock(), enabled: !!user });
   const { data: allKits } = useQuery({ queryKey: ["productKits"], queryFn: () => productKitsApi.list(), enabled: !!user });
 
@@ -42,7 +44,7 @@ export default function Products() {
   const updateMutation = useMutation({ mutationFn: productsApi.update, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto atualizado!"); resetForm(); }, onError: (e: any) => toast.error(e.message) });
   const deleteMutation = useMutation({ mutationFn: productsApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto excluído!"); }, onError: (e: any) => toast.error(e.message) });
 
-  const resetForm = () => { setFormData({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0" }); setEditingProduct(null); setIsDialogOpen(false); };
+  const resetForm = () => { setFormData({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0", isTesting: false }); setEditingProduct(null); setIsDialogOpen(false); };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +54,7 @@ export default function Products() {
 
   const handleEdit = (product: any) => {
     setEditingProduct(product);
-    setFormData({ name: product.name, description: product.description || "", category: product.category || "", cost: product.cost, salePrice: product.salePrice, quantity: product.quantity?.toString() || "0", minimumStock: product.minimumStock?.toString() || "0" });
+    setFormData({ name: product.name, description: product.description || "", category: product.category || "", cost: product.cost, salePrice: product.salePrice, quantity: product.quantity?.toString() || "0", minimumStock: product.minimumStock?.toString() || "0", isTesting: product.isTesting || false });
     setIsDialogOpen(true);
   };
 
