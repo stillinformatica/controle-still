@@ -9,10 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { productsApi, productKitsApi, bankAccountsApi } from "@/lib/api";
+import { productsApi, productKitsApi, bankAccountsApi, productImagesApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React from "react";
-import { Plus, Package, Trash2, Edit, ShoppingCart, X, AlertTriangle } from "lucide-react";
+import { Plus, Package, Trash2, Edit, ShoppingCart, X, AlertTriangle, Camera, Megaphone, Loader2 } from "lucide-react";
 import PriceTableExport from "@/components/PriceTableExport";
 import { toast } from "sonner";
 
@@ -29,6 +29,8 @@ export default function Products() {
   const [isKitDialogOpen, setIsKitDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [formData, setFormData] = useState({ name: "", description: "", category: "", cost: "", salePrice: "", quantity: "0", minimumStock: "0" });
+  const [photoDialogProduct, setPhotoDialogProduct] = useState<any>(null);
+  const [announcingProduct, setAnnouncingProduct] = useState<any>(null);
 
   const { data: products, isLoading } = useQuery({ queryKey: ["products", { isActive: true }], queryFn: () => productsApi.list({ isActive: true }), enabled: !!user });
   const { data: lowStockProducts } = useQuery({ queryKey: ["products", "lowStock"], queryFn: () => productsApi.getLowStock(), enabled: !!user });
@@ -88,8 +90,8 @@ export default function Products() {
               <div className="overflow-x-auto w-full">
                 <Table className="w-full table-fixed">
                   <TableHeader><TableRow>
-                    <TableHead className="w-[35%]">Produto</TableHead><TableHead className="text-right w-[12%]">Custo</TableHead><TableHead className="text-right w-[13%]">Preço Venda</TableHead>
-                    <TableHead className="text-right w-[8%]">Qtd</TableHead><TableHead className="text-right w-[12%]">Lucro</TableHead><TableHead className="text-right w-[10%]">Margem</TableHead><TableHead className="text-right w-[10%]">Ações</TableHead>
+                    <TableHead className="w-[30%]">Produto</TableHead><TableHead className="text-right w-[10%]">Custo</TableHead><TableHead className="text-right w-[11%]">Preço Venda</TableHead>
+                    <TableHead className="text-right w-[7%]">Qtd</TableHead><TableHead className="text-right w-[10%]">Lucro</TableHead><TableHead className="text-right w-[8%]">Margem</TableHead><TableHead className="text-right w-[24%]">Ações</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
                     {products.map((product: any) => {
@@ -103,7 +105,7 @@ export default function Products() {
                           <TableCell className="text-right tabular-nums"><span className={`font-semibold ${product.minimumStock > 0 && product.quantity <= product.minimumStock ? "text-amber-600" : ""}`}>{product.quantity || 0}{product.minimumStock > 0 && product.quantity <= product.minimumStock && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />}</span></TableCell>
                           <TableCell className="text-right tabular-nums font-semibold text-green-600 text-sm">{formatCurrency(profit)}</TableCell>
                           <TableCell className="text-right tabular-nums font-semibold text-blue-600 text-sm">{margin.toFixed(1)}%</TableCell>
-                          <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
+                          <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon-sm" onClick={() => setPhotoDialogProduct(product)} title="Fotos"><Camera className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => setAnnouncingProduct(product)} title="Anunciar"><Megaphone className="h-4 w-4 text-primary" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
                         </TableRow>
                       );
                     })}
@@ -153,6 +155,9 @@ export default function Products() {
             <KitForm onClose={() => setIsKitDialogOpen(false)} />
           </DialogContent>
         </Dialog>
+
+        {photoDialogProduct && <PhotoDialog product={photoDialogProduct} onClose={() => setPhotoDialogProduct(null)} />}
+        {announcingProduct && <AnnounceDialog product={announcingProduct} onClose={() => setAnnouncingProduct(null)} />}
       </div>
     </DashboardLayout>
   );
@@ -319,5 +324,131 @@ function KitsList() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function PhotoDialog({ product, onClose }: { product: any; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: images = [], isLoading } = useQuery({
+    queryKey: ["productImages", product.id],
+    queryFn: () => productImagesApi.list(product.id),
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => productImagesApi.upload({ productId: product.id, file }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productImages", product.id] }); toast.success("Foto adicionada!"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (img: any) => productImagesApi.delete({ id: img.id, storagePath: img.storagePath }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productImages", product.id] }); toast.success("Foto removida!"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) Array.from(files).forEach(f => uploadMutation.mutate(f));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Fotos - {product.name}</DialogTitle>
+          <DialogDescription>Gerencie as fotos do produto</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+          <Button onClick={() => fileInputRef.current?.click()} disabled={uploadMutation.isPending}>
+            {uploadMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Camera className="mr-2 h-4 w-4" />Adicionar Fotos</>}
+          </Button>
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : images.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Nenhuma foto adicionada.</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              {images.map((img: any) => (
+                <div key={img.id} className="relative group rounded-lg overflow-hidden border">
+                  <img src={img.url} alt={product.name} className="w-full h-32 object-cover" />
+                  <Button variant="destructive" size="icon-sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteMutation.mutate(img)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AnnounceDialog({ product, onClose }: { product: any; onClose: () => void }) {
+  const [sending, setSending] = useState(false);
+  const { data: images = [] } = useQuery({
+    queryKey: ["productImages", product.id],
+    queryFn: () => productImagesApi.list(product.id),
+  });
+
+  const handleAnnounce = async () => {
+    setSending(true);
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/announce-product`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+          body: JSON.stringify({
+            name: product.name,
+            description: product.description || "",
+            category: product.category || "",
+            price: product.salePrice,
+            images: images.map((img: any) => img.url),
+          }),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Erro ao anunciar");
+      toast.success("Produto anunciado com sucesso!");
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao anunciar produto");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Anunciar Produto</DialogTitle>
+          <DialogDescription>Enviar "{product.name}" para o site de vendas</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="p-4 bg-muted rounded-lg space-y-2">
+            <div className="flex justify-between"><span className="text-sm">Nome:</span><span className="font-medium">{product.name}</span></div>
+            {product.category && <div className="flex justify-between"><span className="text-sm">Categoria:</span><span className="font-medium">{product.category}</span></div>}
+            <div className="flex justify-between"><span className="text-sm">Preço:</span><span className="font-bold text-primary tabular-nums">R$ {parseFloat(product.salePrice).toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-sm">Fotos:</span><span className="font-medium">{images.length} foto(s)</span></div>
+          </div>
+          {images.length === 0 && (
+            <p className="text-sm text-amber-600 flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Recomendamos adicionar fotos antes de anunciar.</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleAnnounce} disabled={sending}>
+            {sending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Megaphone className="mr-2 h-4 w-4" />Anunciar</>}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
