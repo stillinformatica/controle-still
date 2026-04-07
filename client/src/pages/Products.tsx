@@ -99,10 +99,10 @@ export default function Products() {
                 {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
                 : regularProducts.length > 0 ? (
                   <div className="overflow-x-auto w-full">
-                    <Table className="w-full table-fixed">
+                    <Table className="w-full min-w-[700px]">
                       <TableHeader><TableRow>
-                        <TableHead className="w-[30%]">Produto</TableHead><TableHead className="text-right w-[10%]">Custo</TableHead><TableHead className="text-right w-[11%]">Preço Venda</TableHead>
-                        <TableHead className="text-right w-[7%]">Qtd</TableHead><TableHead className="text-right w-[10%]">Lucro</TableHead><TableHead className="text-right w-[8%]">Margem</TableHead><TableHead className="text-right w-[24%]">Ações</TableHead>
+                        <TableHead>Produto</TableHead><TableHead className="text-right">Custo</TableHead><TableHead className="text-right">Preço Venda</TableHead>
+                        <TableHead className="text-right">Qtd</TableHead><TableHead className="text-right">Lucro</TableHead><TableHead className="text-right">Margem</TableHead><TableHead className="text-right">Ações</TableHead>
                       </TableRow></TableHeader>
                       <TableBody>
                         {regularProducts.map((product: any) => {
@@ -137,10 +137,10 @@ export default function Products() {
                 {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
                 : testingProducts.length > 0 ? (
                   <div className="overflow-x-auto w-full">
-                    <Table className="w-full table-fixed">
+                    <Table className="w-full min-w-[500px]">
                       <TableHeader><TableRow>
-                        <TableHead className="w-[35%]">Produto</TableHead><TableHead className="text-right w-[10%]">Custo</TableHead>
-                        <TableHead className="text-right w-[10%]">Qtd</TableHead><TableHead className="text-center w-[20%]">Preço</TableHead><TableHead className="text-right w-[25%]">Ações</TableHead>
+                        <TableHead>Produto</TableHead><TableHead className="text-right">Custo</TableHead>
+                        <TableHead className="text-right">Qtd</TableHead><TableHead className="text-center">Preço</TableHead><TableHead className="text-right">Ações</TableHead>
                       </TableRow></TableHeader>
                       <TableBody>
                         {testingProducts.map((product: any) => (
