@@ -43,7 +43,21 @@ export default function Products() {
   const { data: lowStockProducts } = useQuery({ queryKey: ["products", "lowStock"], queryFn: () => productsApi.getLowStock(), enabled: !!user });
   const { data: allKits } = useQuery({ queryKey: ["productKits"], queryFn: () => productKitsApi.list(), enabled: !!user });
 
-  const createMutation = useMutation({ mutationFn: productsApi.create, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto criado!"); resetForm(); }, onError: (e: any) => toast.error(e.message) });
+  const createMutation = useMutation({
+    mutationFn: productsApi.create,
+    onSuccess: async (data: any) => {
+      if (pendingPhotos.length > 0 && data?.id) {
+        for (const file of pendingPhotos) {
+          try { await productImagesApi.upload({ productId: data.id, file }); } catch (e) { console.error("Erro ao enviar foto:", e); }
+        }
+        queryClient.invalidateQueries({ queryKey: ["productImages", data.id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Produto criado!");
+      resetForm();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
   const updateMutation = useMutation({ mutationFn: productsApi.update, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto atualizado!"); resetForm(); }, onError: (e: any) => toast.error(e.message) });
   const deleteMutation = useMutation({ mutationFn: productsApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Produto excluído!"); }, onError: (e: any) => toast.error(e.message) });
 
