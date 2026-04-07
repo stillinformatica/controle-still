@@ -383,6 +383,7 @@ function KitsList() {
 function PhotoDialog({ product, onClose }: { product: any; onClose: () => void }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const { data: images = [], isLoading } = useQuery({
     queryKey: ["productImages", product.id],
@@ -407,6 +408,12 @@ function PhotoDialog({ product, onClose }: { product: any; onClose: () => void }
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleCameraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) Array.from(files).forEach(f => uploadMutation.mutate(f));
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+  };
+
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-2xl">
@@ -416,9 +423,15 @@ function PhotoDialog({ product, onClose }: { product: any; onClose: () => void }
         </DialogHeader>
         <div className="space-y-4">
           <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
-          <Button onClick={() => fileInputRef.current?.click()} disabled={uploadMutation.isPending}>
-            {uploadMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Camera className="mr-2 h-4 w-4" />Adicionar Fotos</>}
-          </Button>
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCameraChange} />
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={() => cameraInputRef.current?.click()} disabled={uploadMutation.isPending} variant="default">
+              {uploadMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Camera className="mr-2 h-4 w-4" />Tirar Foto</>}
+            </Button>
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploadMutation.isPending} variant="outline">
+              {uploadMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Plus className="mr-2 h-4 w-4" />Galeria</>}
+            </Button>
+          </div>
           {isLoading ? (
             <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
           ) : images.length === 0 ? (
