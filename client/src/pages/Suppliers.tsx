@@ -66,7 +66,7 @@ export default function Suppliers() {
 
         {/* Dialog de histórico */}
         <Dialog open={!!historySupplier} onOpenChange={(o) => { if (!o) setHistorySupplier(null); }}>
-          <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] overflow-y-auto rounded-none">
             <DialogHeader>
               <DialogTitle>Histórico - {historySupplier?.name}</DialogTitle>
               <DialogDescription>Compras e pagamentos deste fornecedor</DialogDescription>
