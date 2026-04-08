@@ -156,7 +156,7 @@ export default function Services() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <div><h1 className="text-3xl font-bold">Serviços</h1><p className="text-muted-foreground mt-2">Gerencie ordens de serviço</p></div>
+          <div><h1 className="text-3xl font-bold">Serviços</h1><p className="text-muted-foreground mt-2">Registre serviços prestados com OS automática</p></div>
           <div className="flex gap-2 items-center">
             <Label htmlFor="month-filter" className="text-sm whitespace-nowrap">Período:</Label>
             <Input id="month-filter" type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-40" disabled={showAllPeriods} />
@@ -171,7 +171,23 @@ export default function Services() {
         </div>
 
         <Card>
-          <CardHeader><CardTitle>Serviços por Cliente</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Lista de Serviços {services ? <span className="text-sm font-normal text-muted-foreground">({services.length} itens / {groupedByCustomer.length} clientes)</span> : null}</CardTitle>
+              <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">Em Aberto</SelectItem>
+                  <SelectItem value="completed">Concluídos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="relative mt-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar por cliente, número de OS, descrição, número de série ou armazenamento..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+            </div>
+          </CardHeader>
           <CardContent>
             {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
             : groupedByCustomer.length > 0 ? (
