@@ -17,7 +17,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { servicesApi, bankAccountsApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Wrench, Trash2, Edit, ChevronDown, ChevronRight, User } from "lucide-react";
+import { Plus, Wrench, Trash2, Edit, ChevronDown, ChevronRight, User, Search } from "lucide-react";
 import { toast } from "sonner";
 import { getCurrentDateString } from "@/../../shared/timezone";
 
@@ -36,6 +36,8 @@ export default function Services() {
   });
   const [showAllPeriods, setShowAllPeriods] = useState(false);
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"open" | "completed" | "all">("open");
 
   const [formData, setFormData] = useState({
     date: getCurrentDateString(), description: "", serialNumber: "", amount: "", cost: "",
@@ -46,12 +48,29 @@ export default function Services() {
   const { data: accounts } = useQuery({ queryKey: ["bankAccounts"], queryFn: () => bankAccountsApi.list(), enabled: !!user });
 
   const services = useMemo(() => {
-    if (!allServices || showAllPeriods) return allServices;
-    return allServices.filter((s: any) => {
-      const d = new Date(s.date);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` === selectedMonth;
-    });
-  }, [allServices, selectedMonth, showAllPeriods]);
+    if (!allServices) return allServices;
+    let filtered = allServices;
+    if (!showAllPeriods) {
+      filtered = filtered.filter((s: any) => {
+        const d = new Date(s.date);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` === selectedMonth;
+      });
+    }
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((s: any) => s.status === statusFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((s: any) =>
+        (s.customerName || "").toLowerCase().includes(q) ||
+        (s.osNumber || "").toLowerCase().includes(q) ||
+        (s.description || "").toLowerCase().includes(q) ||
+        (s.serialNumber || "").toLowerCase().includes(q) ||
+        (s.storageLocation || "").toLowerCase().includes(q)
+      );
+    }
+    return filtered;
+  }, [allServices, selectedMonth, showAllPeriods, statusFilter, searchQuery]);
 
   // Group services by customer
   const groupedByCustomer = useMemo(() => {
