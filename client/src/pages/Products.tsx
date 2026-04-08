@@ -345,6 +345,7 @@ function KitsList() {
   const [editingKit, setEditingKit] = useState<any>(null);
   const [editForm, setEditForm] = useState({ name: "", description: "", salePrice: "", category: "" });
   const [photoKit, setPhotoKit] = useState<any>(null);
+  const [announceKit, setAnnounceKit] = useState<any>(null);
   const [editItems, setEditItems] = useState<{ productId: number; quantity: number; productName?: string }[]>([]);
   const [newItemProductId, setNewItemProductId] = useState("");
   const [newItemQty, setNewItemQty] = useState(1);
@@ -386,6 +387,7 @@ function KitsList() {
                 <Button variant="default" size="sm" onClick={() => sellKitMutation.mutate({ kitId: kit.id, quantity: 1 })}><ShoppingCart className="h-4 w-4 mr-2" />Vender</Button>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="sm" onClick={() => setPhotoKit(kit)}><ImageIcon className="h-4 w-4 text-muted-foreground" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => setAnnounceKit(kit)}><Megaphone className="h-4 w-4 text-muted-foreground" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => handleEditClick(kit)}><Edit className="h-4 w-4 text-blue-500" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => { if (confirm("Excluir?")) deleteKitMutation.mutate({ id: kit.id }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
