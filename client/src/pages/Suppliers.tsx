@@ -76,11 +76,31 @@ export default function Suppliers() {
               const totalPayments = (payments || []).reduce((s: number, p: any) => s + parseFloat(p.amount), 0);
               const balance = totalPurchases - totalPayments;
               
-              // Build combined timeline sorted by date for running balance
+              // Build combined timeline sorted by date, then creation time, ensuring carry-over entries come first
               const allEntries = [
-                ...(purchases || []).map((p: any) => ({ ...p, type: 'purchase' as const, sortDate: p.date })),
-                ...(payments || []).map((p: any) => ({ ...p, type: 'payment' as const, sortDate: p.date })),
-              ].sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+                ...(purchases || []).map((p: any) => ({
+                  ...p,
+                  type: 'purchase' as const,
+                  sortDate: p.date,
+                  sortCreatedAt: p.createdAt || '',
+                  sortPriority: String(p.description || '').trim().toUpperCase() === 'ANTERIOR' ? 0 : 1,
+                })),
+                ...(payments || []).map((p: any) => ({
+                  ...p,
+                  type: 'payment' as const,
+                  sortDate: p.date,
+                  sortCreatedAt: p.createdAt || '',
+                  sortPriority: 2,
+                })),
+              ].sort((a, b) => {
+                const byDate = a.sortDate.localeCompare(b.sortDate);
+                if (byDate !== 0) return byDate;
+                const byPriority = a.sortPriority - b.sortPriority;
+                if (byPriority !== 0) return byPriority;
+                const byCreatedAt = a.sortCreatedAt.localeCompare(b.sortCreatedAt);
+                if (byCreatedAt !== 0) return byCreatedAt;
+                return a.id - b.id;
+              });
               
               let runningBalance = 0;
               const entriesWithBalance = allEntries.map((e) => {
