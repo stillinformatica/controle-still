@@ -345,6 +345,7 @@ function KitsList() {
   const [editingKit, setEditingKit] = useState<any>(null);
   const [editForm, setEditForm] = useState({ name: "", description: "", salePrice: "", category: "" });
   const [photoKit, setPhotoKit] = useState<any>(null);
+  const [announceKit, setAnnounceKit] = useState<any>(null);
   const [editItems, setEditItems] = useState<{ productId: number; quantity: number; productName?: string }[]>([]);
   const [newItemProductId, setNewItemProductId] = useState("");
   const [newItemQty, setNewItemQty] = useState(1);
@@ -386,6 +387,7 @@ function KitsList() {
                 <Button variant="default" size="sm" onClick={() => sellKitMutation.mutate({ kitId: kit.id, quantity: 1 })}><ShoppingCart className="h-4 w-4 mr-2" />Vender</Button>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="sm" onClick={() => setPhotoKit(kit)}><ImageIcon className="h-4 w-4 text-muted-foreground" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => setAnnounceKit(kit)}><Megaphone className="h-4 w-4 text-muted-foreground" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => handleEditClick(kit)}><Edit className="h-4 w-4 text-blue-500" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => { if (confirm("Excluir?")) deleteKitMutation.mutate({ id: kit.id }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
@@ -435,6 +437,7 @@ function KitsList() {
         </DialogContent>
       </Dialog>
       {photoKit && <KitPhotoDialog kit={photoKit} onClose={() => setPhotoKit(null)} />}
+      {announceKit && <KitAnnounceDialog kit={announceKit} onClose={() => setAnnounceKit(null)} />}
     </>
   );
 }
@@ -502,6 +505,72 @@ function KitPhotoDialog({ kit, onClose }: { kit: any; onClose: () => void }) {
             </div>
           )}
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function KitAnnounceDialog({ kit, onClose }: { kit: any; onClose: () => void }) {
+  const [sending, setSending] = useState(false);
+  const { data: images = [] } = useQuery({
+    queryKey: ["kitImages", kit.id],
+    queryFn: () => productKitImagesApi.list(kit.id),
+  });
+
+  const handleAnnounce = async () => {
+    setSending(true);
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/announce-product`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+          body: JSON.stringify({
+            name: kit.name,
+            description: kit.description || "",
+            category: kit.category || "",
+            price: kit.salePrice,
+            images: images.map((img: any) => img.url),
+            isTesting: false,
+          }),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Erro ao anunciar");
+      toast.success("Kit anunciado com sucesso!");
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao anunciar kit");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Anunciar Kit</DialogTitle>
+          <DialogDescription>Enviar "{kit.name}" para o site de vendas</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="p-4 bg-muted rounded-lg space-y-2">
+            <div className="flex justify-between"><span className="text-sm">Nome:</span><span className="font-medium">{kit.name}</span></div>
+            {kit.category && <div className="flex justify-between"><span className="text-sm">Categoria:</span><span className="font-medium">{kit.category}</span></div>}
+            <div className="flex justify-between"><span className="text-sm">Preço:</span><span className="font-bold text-primary tabular-nums">R$ {parseFloat(kit.salePrice).toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-sm">Fotos:</span><span className="font-medium">{images.length} foto(s)</span></div>
+          </div>
+          {images.length === 0 && (
+            <p className="text-sm text-amber-600 flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Recomendamos adicionar fotos antes de anunciar.</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleAnnounce} disabled={sending}>
+            {sending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Megaphone className="mr-2 h-4 w-4" />Anunciar</>}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
