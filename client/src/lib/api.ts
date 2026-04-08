@@ -764,14 +764,28 @@ export const suppliersApi = {
   getPurchases: async (supplierName: string) => {
     const userId = await getUserId();
     const data = throwIfError(
-      await supabase.from("purchases").select("*").eq("user_id", userId).eq("supplier", supplierName).order("date", { ascending: false })
+      await supabase
+        .from("purchases")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("supplier", supplierName)
+        .order("date", { ascending: true })
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
     );
     return mapKeys(data);
   },
   getPayments: async (supplierName: string) => {
     const userId = await getUserId();
     const data = throwIfError(
-      await supabase.from("supplier_payments").select("*").eq("user_id", userId).eq("supplier_name", supplierName).order("date", { ascending: false })
+      await supabase
+        .from("supplier_payments")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("supplier_name", supplierName)
+        .order("date", { ascending: true })
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
     );
     return mapKeys(data);
   },
