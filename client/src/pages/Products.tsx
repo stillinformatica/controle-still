@@ -343,7 +343,8 @@ function KitsList() {
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingKit, setEditingKit] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: "", description: "", salePrice: "" });
+  const [editForm, setEditForm] = useState({ name: "", description: "", salePrice: "", category: "" });
+  const [photoKit, setPhotoKit] = useState<any>(null);
   const [editItems, setEditItems] = useState<{ productId: number; quantity: number; productName?: string }[]>([]);
   const [newItemProductId, setNewItemProductId] = useState("");
   const [newItemQty, setNewItemQty] = useState(1);
@@ -363,8 +364,8 @@ function KitsList() {
   const deleteKitMutation = useMutation({ mutationFn: productKitsApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); toast.success("Kit excluído!"); }, onError: (e: any) => toast.error(e.message) });
   const updateKitMutation = useMutation({ mutationFn: productKitsApi.update, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); toast.success("Kit atualizado!"); setEditDialogOpen(false); setEditingKit(null); }, onError: (e: any) => toast.error(e.message) });
 
-  const handleEditClick = (kit: any) => { setEditingKit(kit); setEditForm({ name: kit.name, description: kit.description || "", salePrice: kit.salePrice }); setEditItems([]); setEditDialogOpen(true); };
-  const handleEditSubmit = (e: React.FormEvent) => { e.preventDefault(); if (!editingKit) return; updateKitMutation.mutate({ id: editingKit.id, name: editForm.name, description: editForm.description, salePrice: editForm.salePrice, items: editItems.map(i => ({ productId: i.productId, quantity: i.quantity })) }); };
+  const handleEditClick = (kit: any) => { setEditingKit(kit); setEditForm({ name: kit.name, description: kit.description || "", salePrice: kit.salePrice, category: kit.category || "" }); setEditItems([]); setEditDialogOpen(true); };
+  const handleEditSubmit = (e: React.FormEvent) => { e.preventDefault(); if (!editingKit) return; updateKitMutation.mutate({ id: editingKit.id, name: editForm.name, description: editForm.description, salePrice: editForm.salePrice, category: editForm.category, items: editItems.map(i => ({ productId: i.productId, quantity: i.quantity })) }); };
 
   if (isLoading) return <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   if (!kits || kits.length === 0) return <div className="text-center py-8 text-muted-foreground">Nenhum kit cadastrado.</div>;
