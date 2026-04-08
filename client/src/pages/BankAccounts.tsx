@@ -68,7 +68,12 @@ export default function BankAccounts() {
 
   const formatCurrency = (value: string | number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(typeof value === 'string' ? parseFloat(value) : value);
   const accountTypeLabels: any = { checking: "Conta Corrente", savings: "Poupança", investment: "Investimento", cash: "Dinheiro" };
-  const totalBalance = accounts?.reduce((sum: number, acc: any) => sum + parseFloat(acc.balance), 0) || 0;
+  const marketplaceKeywords = ["shopee", "mercado livre", "mercadolivre", "mercado pago"];
+  const isMarketplace = (name: string) => marketplaceKeywords.some(kw => name.toLowerCase().includes(kw));
+  const businessAccounts = (accounts || []).filter((a: any) => !isMarketplace(a.name));
+  const marketplaceAccounts = (accounts || []).filter((a: any) => isMarketplace(a.name));
+  const totalBalance = businessAccounts.reduce((sum: number, acc: any) => sum + parseFloat(acc.balance), 0);
+  const totalMarketplace = marketplaceAccounts.reduce((sum: number, acc: any) => sum + parseFloat(acc.balance), 0);
 
   return (
     <DashboardLayout>
@@ -82,10 +87,16 @@ export default function BankAccounts() {
           </div>
         </div>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardHeader><CardTitle className="text-blue-900">Saldo Total</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold text-blue-900 tabular-nums">{formatCurrency(totalBalance)}</div><p className="text-sm text-blue-700 mt-1">{accounts?.length || 0} conta(s) ativa(s)</p></CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <CardHeader><CardTitle className="text-blue-900">Saldo Total em Contas</CardTitle></CardHeader>
+            <CardContent><div className="text-3xl font-bold text-blue-900 tabular-nums">{formatCurrency(totalBalance)}</div><p className="text-sm text-blue-700 mt-1">{businessAccounts.length} conta(s)</p></CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <CardHeader><CardTitle className="text-orange-900">A Receber (Marketplace)</CardTitle></CardHeader>
+            <CardContent><div className="text-3xl font-bold text-orange-900 tabular-nums">{formatCurrency(totalMarketplace)}</div><p className="text-sm text-orange-700 mt-1">{marketplaceAccounts.length} conta(s) - Shopee/Mercado Livre</p></CardContent>
+          </Card>
+        </div>
 
         {isLoading ? (
           <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
