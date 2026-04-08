@@ -563,6 +563,7 @@ export const servicesApi = {
       await supabase.from("services").insert({
         user_id: userId, date: input.date, description: input.description,
         service_type: input.serviceType || "pending",
+        status: input.serviceType === "no_repair" ? "completed" : "open",
         amount: input.amount ? parseFloat(input.amount) : null,
         cost: input.cost ? parseFloat(input.cost) : 0,
         profit: input.amount ? parseFloat(input.amount) - (input.cost ? parseFloat(input.cost) : 0) : 0,
@@ -580,7 +581,10 @@ export const servicesApi = {
     const updates: any = { updated_at: new Date().toISOString() };
     if (input.date !== undefined) updates.date = input.date;
     if (input.description !== undefined) updates.description = input.description;
-    if (input.serviceType !== undefined) updates.service_type = input.serviceType;
+    if (input.serviceType !== undefined) {
+      updates.service_type = input.serviceType;
+      updates.status = input.serviceType === "no_repair" ? "completed" : "open";
+    }
     if (input.amount !== undefined) updates.amount = input.amount ? parseFloat(input.amount) : null;
     if (input.cost !== undefined) updates.cost = input.cost ? parseFloat(input.cost) : 0;
     if (input.amount !== undefined || input.cost !== undefined) {
