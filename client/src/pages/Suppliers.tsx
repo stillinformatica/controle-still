@@ -135,7 +135,7 @@ export default function Suppliers() {
                                     {e.type === 'purchase' ? 'Compra' : 'Pagamento'}
                                   </span>
                                 </TableCell>
-                                <TableCell className="break-words">{e.description || e.notes || '-'}</TableCell>
+                                <TableCell className="break-words overflow-hidden whitespace-normal">{e.description || e.notes || '-'}</TableCell>
                                 <TableCell className={`text-right tabular-nums ${e.type === 'purchase' ? 'text-destructive' : 'text-green-600'}`}>{e.type === 'purchase' ? '+' : '-'}{formatCurrency(e.amount)}</TableCell>
                                 <TableCell className={`text-right tabular-nums font-medium ${e.balance > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(e.balance)}</TableCell>
                               </TableRow>
