@@ -295,6 +295,12 @@ function KitForm({ onClose }: { onClose: () => void }) {
       <div className="grid gap-4">
         <div><Label>Nome do Kit *</Label><Input value={kitForm.name} onChange={(e) => setKitForm({ ...kitForm, name: e.target.value })} required /></div>
         <div><Label>Descrição</Label><Textarea value={kitForm.description} onChange={(e) => setKitForm({ ...kitForm, description: e.target.value })} rows={2} /></div>
+        <div><Label>Categoria</Label>
+          <Select value={kitForm.category} onValueChange={(v) => setKitForm({ ...kitForm, category: v })}>
+            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectContent>{PRODUCT_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
         <div><Label>Preço de Venda *</Label><Input type="number" step="0.01" value={kitForm.salePrice} onChange={(e) => setKitForm({ ...kitForm, salePrice: e.target.value })} required /></div>
       </div>
       <div className="space-y-2">
