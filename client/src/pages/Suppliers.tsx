@@ -66,54 +66,105 @@ export default function Suppliers() {
 
         {/* Dialog de histórico */}
         <Dialog open={!!historySupplier} onOpenChange={(o) => { if (!o) setHistorySupplier(null); }}>
-          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Histórico - {historySupplier?.name}</DialogTitle>
               <DialogDescription>Compras e pagamentos deste fornecedor</DialogDescription>
             </DialogHeader>
-            <Tabs defaultValue="purchases">
-              <TabsList className="w-full">
-                <TabsTrigger value="purchases" className="flex-1">Compras ({purchases?.length || 0})</TabsTrigger>
-                <TabsTrigger value="payments" className="flex-1">Pagamentos ({payments?.length || 0})</TabsTrigger>
-              </TabsList>
-              <TabsContent value="purchases">
-                {purchases && purchases.length > 0 ? (
-                  <Table>
-                    <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Descrição</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                      {purchases.map((p: any) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="whitespace-nowrap">{formatDate(p.date)}</TableCell>
-                          <TableCell>{p.description}</TableCell>
-                          <TableCell>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${p.status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
-                              {p.status === "paid" ? "Pago" : "Pendente"}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">{formatCurrency(p.amount)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : <p className="text-center text-muted-foreground py-8">Nenhuma compra registrada.</p>}
-              </TabsContent>
-              <TabsContent value="payments">
-                {payments && payments.length > 0 ? (
-                  <Table>
-                    <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Observações</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                      {payments.map((p: any) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="whitespace-nowrap">{formatDate(p.date)}</TableCell>
-                          <TableCell>{p.notes || "-"}</TableCell>
-                          <TableCell className="text-right tabular-nums">{formatCurrency(p.amount)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : <p className="text-center text-muted-foreground py-8">Nenhum pagamento registrado.</p>}
-              </TabsContent>
-            </Tabs>
+            {(() => {
+              const totalPurchases = (purchases || []).reduce((s: number, p: any) => s + parseFloat(p.amount), 0);
+              const totalPayments = (payments || []).reduce((s: number, p: any) => s + parseFloat(p.amount), 0);
+              const balance = totalPurchases - totalPayments;
+              
+              // Build combined timeline sorted by date for running balance
+              const allEntries = [
+                ...(purchases || []).map((p: any) => ({ ...p, type: 'purchase' as const, sortDate: p.date })),
+                ...(payments || []).map((p: any) => ({ ...p, type: 'payment' as const, sortDate: p.date })),
+              ].sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+              
+              let runningBalance = 0;
+              const entriesWithBalance = allEntries.map((e) => {
+                if (e.type === 'purchase') runningBalance += parseFloat(e.amount);
+                else runningBalance -= parseFloat(e.amount);
+                return { ...e, balance: runningBalance };
+              });
+
+              return (
+                <>
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <Card><CardContent className="pt-4 pb-3 px-4"><p className="text-xs text-muted-foreground">Total Compras</p><p className="text-lg font-bold text-destructive">{formatCurrency(totalPurchases)}</p></CardContent></Card>
+                    <Card><CardContent className="pt-4 pb-3 px-4"><p className="text-xs text-muted-foreground">Total Pagamentos</p><p className="text-lg font-bold text-green-600">{formatCurrency(totalPayments)}</p></CardContent></Card>
+                    <Card><CardContent className="pt-4 pb-3 px-4"><p className="text-xs text-muted-foreground">Saldo Devedor</p><p className={`text-lg font-bold ${balance > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(balance)}</p></CardContent></Card>
+                  </div>
+                  <Tabs defaultValue="timeline">
+                    <TabsList className="w-full">
+                      <TabsTrigger value="timeline" className="flex-1">Extrato ({entriesWithBalance.length})</TabsTrigger>
+                      <TabsTrigger value="purchases" className="flex-1">Compras ({purchases?.length || 0})</TabsTrigger>
+                      <TabsTrigger value="payments" className="flex-1">Pagamentos ({payments?.length || 0})</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="timeline">
+                      {entriesWithBalance.length > 0 ? (
+                        <Table>
+                          <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Tipo</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Saldo</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                            {entriesWithBalance.map((e: any, i: number) => (
+                              <TableRow key={`${e.type}-${e.id}-${i}`}>
+                                <TableCell className="whitespace-nowrap">{formatDate(e.sortDate)}</TableCell>
+                                <TableCell>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${e.type === 'purchase' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                    {e.type === 'purchase' ? 'Compra' : 'Pagamento'}
+                                  </span>
+                                </TableCell>
+                                <TableCell>{e.description || e.notes || '-'}</TableCell>
+                                <TableCell className={`text-right tabular-nums ${e.type === 'purchase' ? 'text-destructive' : 'text-green-600'}`}>{e.type === 'purchase' ? '+' : '-'}{formatCurrency(e.amount)}</TableCell>
+                                <TableCell className={`text-right tabular-nums font-medium ${e.balance > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(e.balance)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : <p className="text-center text-muted-foreground py-8">Nenhum registro encontrado.</p>}
+                    </TabsContent>
+                    <TabsContent value="purchases">
+                      {purchases && purchases.length > 0 ? (
+                        <Table>
+                          <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Descrição</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                            {purchases.map((p: any) => (
+                              <TableRow key={p.id}>
+                                <TableCell className="whitespace-nowrap">{formatDate(p.date)}</TableCell>
+                                <TableCell>{p.description}</TableCell>
+                                <TableCell>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${p.status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
+                                    {p.status === "paid" ? "Pago" : "Pendente"}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">{formatCurrency(p.amount)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : <p className="text-center text-muted-foreground py-8">Nenhuma compra registrada.</p>}
+                    </TabsContent>
+                    <TabsContent value="payments">
+                      {payments && payments.length > 0 ? (
+                        <Table>
+                          <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Observações</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                            {payments.map((p: any) => (
+                              <TableRow key={p.id}>
+                                <TableCell className="whitespace-nowrap">{formatDate(p.date)}</TableCell>
+                                <TableCell>{p.notes || "-"}</TableCell>
+                                <TableCell className="text-right tabular-nums">{formatCurrency(p.amount)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : <p className="text-center text-muted-foreground py-8">Nenhum pagamento registrado.</p>}
+                    </TabsContent>
+                  </Tabs>
+                </>
+              );
+            })()}
           </DialogContent>
         </Dialog>
       </div>
