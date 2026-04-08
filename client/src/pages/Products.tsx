@@ -375,7 +375,7 @@ function KitsList() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {kits.map((kit: any) => (
           <Card key={kit.id} className="relative">
-            <CardHeader><CardTitle className="text-lg">{kit.name}</CardTitle>{kit.description && <p className="text-sm text-muted-foreground">{kit.description}</p>}</CardHeader>
+            <CardHeader><CardTitle className="text-lg">{kit.name}</CardTitle>{kit.category && <span className="text-xs text-muted-foreground">{kit.category}</span>}{kit.description && <p className="text-sm text-muted-foreground">{kit.description}</p>}</CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between"><span>Custo:</span><span className="font-semibold tabular-nums">R$ {kit.totalCost}</span></div>
@@ -385,6 +385,7 @@ function KitsList() {
               <div className="mt-4 flex justify-between gap-2">
                 <Button variant="default" size="sm" onClick={() => sellKitMutation.mutate({ kitId: kit.id, quantity: 1 })}><ShoppingCart className="h-4 w-4 mr-2" />Vender</Button>
                 <div className="flex gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => setPhotoKit(kit)}><ImageIcon className="h-4 w-4 text-muted-foreground" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => handleEditClick(kit)}><Edit className="h-4 w-4 text-blue-500" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => { if (confirm("Excluir?")) deleteKitMutation.mutate({ id: kit.id }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
