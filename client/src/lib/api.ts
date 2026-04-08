@@ -310,6 +310,42 @@ export const productImagesApi = {
   },
 };
 
+// ── Product Kit Images ──────────────────────────────────────────────────────
+
+export const productKitImagesApi = {
+  list: async (kitId: number) => {
+    const data = throwIfError(
+      await (supabase.from as any)("product_kit_images").select("*").eq("kit_id", kitId).order("created_at")
+    );
+    return mapKeys(data);
+  },
+  upload: async (input: { kitId: number; file: File }) => {
+    const userId = await getUserId();
+    const ext = input.file.name.split(".").pop() || "jpg";
+    const path = `${userId}/kits/${input.kitId}/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(path, input.file, { contentType: input.file.type });
+    if (uploadError) throw new Error(uploadError.message);
+
+    const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
+
+    const data = throwIfError(
+      await (supabase.from as any)("product_kit_images").insert({
+        kit_id: input.kitId,
+        url: urlData.publicUrl,
+        storage_path: path,
+      }).select().single()
+    );
+    return mapKeys(data);
+  },
+  delete: async (input: { id: number; storagePath: string }) => {
+    await supabase.storage.from("product-images").remove([input.storagePath]);
+    throwIfError(await (supabase.from as any)("product_kit_images").delete().eq("id", input.id));
+  },
+};
+
 // ── Product Kits ────────────────────────────────────────────────────────────
 
 export const productKitsApi = {
@@ -345,6 +381,7 @@ export const productKitsApi = {
       await supabase.from("product_kits").insert({
         user_id: userId, name: input.name, description: input.description || null,
         sale_price: salePrice, total_cost: totalCost, profit, profit_margin: profitMargin,
+        category: input.category || null,
       }).select().single()
     );
 
@@ -372,6 +409,7 @@ export const productKitsApi = {
       await supabase.from("product_kits").update({
         name: input.name, description: input.description || null,
         sale_price: salePrice, total_cost: totalCost, profit, profit_margin: profitMargin,
+        category: input.category || null,
         updated_at: new Date().toISOString(),
       }).eq("id", input.id).eq("user_id", userId)
     );

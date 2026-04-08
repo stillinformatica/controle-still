@@ -11,10 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { productsApi, productKitsApi, bankAccountsApi, productImagesApi } from "@/lib/api";
+import { productsApi, productKitsApi, bankAccountsApi, productImagesApi, productKitImagesApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React from "react";
-import { Plus, Package, Trash2, Edit, ShoppingCart, X, AlertTriangle, Camera, Megaphone, Loader2, FlaskConical, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Package, Trash2, Edit, ShoppingCart, X, AlertTriangle, Camera, Megaphone, Loader2, FlaskConical, RefreshCw, CheckCircle2, XCircle, ImageIcon } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import PriceTableExport from "@/components/PriceTableExport";
 import { toast } from "sonner";
@@ -262,7 +262,7 @@ export default function Products() {
 
 function KitForm({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
-  const [kitForm, setKitForm] = useState({ name: "", description: "", salePrice: "" });
+  const [kitForm, setKitForm] = useState({ name: "", description: "", salePrice: "", category: "" });
   const [selectedItems, setSelectedItems] = useState<Array<{ productId: number; quantity: number; productName: string; cost: string }>>([]);
 
   const { data: products = [] } = useQuery({ queryKey: ["products", { isActive: true }], queryFn: () => productsApi.list({ isActive: true }) });
@@ -277,7 +277,7 @@ function KitForm({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     if (!kitForm.name || !kitForm.salePrice) { toast.error("Preencha nome e preço"); return; }
     if (selectedItems.length === 0) { toast.error("Adicione ao menos um produto"); return; }
-    createKitMutation.mutate({ name: kitForm.name, description: kitForm.description, salePrice: kitForm.salePrice, items: selectedItems.map(i => ({ productId: i.productId, quantity: i.quantity })) });
+    createKitMutation.mutate({ name: kitForm.name, description: kitForm.description, salePrice: kitForm.salePrice, category: kitForm.category, items: selectedItems.map(i => ({ productId: i.productId, quantity: i.quantity })) });
   };
 
   const addProduct = (pid: number) => {
@@ -295,6 +295,12 @@ function KitForm({ onClose }: { onClose: () => void }) {
       <div className="grid gap-4">
         <div><Label>Nome do Kit *</Label><Input value={kitForm.name} onChange={(e) => setKitForm({ ...kitForm, name: e.target.value })} required /></div>
         <div><Label>Descrição</Label><Textarea value={kitForm.description} onChange={(e) => setKitForm({ ...kitForm, description: e.target.value })} rows={2} /></div>
+        <div><Label>Categoria</Label>
+          <Select value={kitForm.category} onValueChange={(v) => setKitForm({ ...kitForm, category: v })}>
+            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectContent>{PRODUCT_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
         <div><Label>Preço de Venda *</Label><Input type="number" step="0.01" value={kitForm.salePrice} onChange={(e) => setKitForm({ ...kitForm, salePrice: e.target.value })} required /></div>
       </div>
       <div className="space-y-2">
@@ -337,7 +343,8 @@ function KitsList() {
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingKit, setEditingKit] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: "", description: "", salePrice: "" });
+  const [editForm, setEditForm] = useState({ name: "", description: "", salePrice: "", category: "" });
+  const [photoKit, setPhotoKit] = useState<any>(null);
   const [editItems, setEditItems] = useState<{ productId: number; quantity: number; productName?: string }[]>([]);
   const [newItemProductId, setNewItemProductId] = useState("");
   const [newItemQty, setNewItemQty] = useState(1);
@@ -357,8 +364,8 @@ function KitsList() {
   const deleteKitMutation = useMutation({ mutationFn: productKitsApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); toast.success("Kit excluído!"); }, onError: (e: any) => toast.error(e.message) });
   const updateKitMutation = useMutation({ mutationFn: productKitsApi.update, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); toast.success("Kit atualizado!"); setEditDialogOpen(false); setEditingKit(null); }, onError: (e: any) => toast.error(e.message) });
 
-  const handleEditClick = (kit: any) => { setEditingKit(kit); setEditForm({ name: kit.name, description: kit.description || "", salePrice: kit.salePrice }); setEditItems([]); setEditDialogOpen(true); };
-  const handleEditSubmit = (e: React.FormEvent) => { e.preventDefault(); if (!editingKit) return; updateKitMutation.mutate({ id: editingKit.id, name: editForm.name, description: editForm.description, salePrice: editForm.salePrice, items: editItems.map(i => ({ productId: i.productId, quantity: i.quantity })) }); };
+  const handleEditClick = (kit: any) => { setEditingKit(kit); setEditForm({ name: kit.name, description: kit.description || "", salePrice: kit.salePrice, category: kit.category || "" }); setEditItems([]); setEditDialogOpen(true); };
+  const handleEditSubmit = (e: React.FormEvent) => { e.preventDefault(); if (!editingKit) return; updateKitMutation.mutate({ id: editingKit.id, name: editForm.name, description: editForm.description, salePrice: editForm.salePrice, category: editForm.category, items: editItems.map(i => ({ productId: i.productId, quantity: i.quantity })) }); };
 
   if (isLoading) return <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   if (!kits || kits.length === 0) return <div className="text-center py-8 text-muted-foreground">Nenhum kit cadastrado.</div>;
@@ -368,7 +375,7 @@ function KitsList() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {kits.map((kit: any) => (
           <Card key={kit.id} className="relative">
-            <CardHeader><CardTitle className="text-lg">{kit.name}</CardTitle>{kit.description && <p className="text-sm text-muted-foreground">{kit.description}</p>}</CardHeader>
+            <CardHeader><CardTitle className="text-lg">{kit.name}</CardTitle>{kit.category && <span className="text-xs text-muted-foreground">{kit.category}</span>}{kit.description && <p className="text-sm text-muted-foreground">{kit.description}</p>}</CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between"><span>Custo:</span><span className="font-semibold tabular-nums">R$ {kit.totalCost}</span></div>
@@ -378,6 +385,7 @@ function KitsList() {
               <div className="mt-4 flex justify-between gap-2">
                 <Button variant="default" size="sm" onClick={() => sellKitMutation.mutate({ kitId: kit.id, quantity: 1 })}><ShoppingCart className="h-4 w-4 mr-2" />Vender</Button>
                 <div className="flex gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => setPhotoKit(kit)}><ImageIcon className="h-4 w-4 text-muted-foreground" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => handleEditClick(kit)}><Edit className="h-4 w-4 text-blue-500" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => { if (confirm("Excluir?")) deleteKitMutation.mutate({ id: kit.id }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
@@ -393,6 +401,12 @@ function KitsList() {
           <form onSubmit={handleEditSubmit} className="space-y-4">
             <div><Label>Nome *</Label><Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required /></div>
             <div><Label>Descrição</Label><Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={2} /></div>
+            <div><Label>Categoria</Label>
+              <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>{PRODUCT_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
             <div><Label>Preço de Venda *</Label><Input type="number" step="0.01" value={editForm.salePrice} onChange={(e) => setEditForm({ ...editForm, salePrice: e.target.value })} required /></div>
             <div className="space-y-2">
               <Label>Produtos</Label>
@@ -420,7 +434,76 @@ function KitsList() {
           </form>
         </DialogContent>
       </Dialog>
+      {photoKit && <KitPhotoDialog kit={photoKit} onClose={() => setPhotoKit(null)} />}
     </>
+  );
+}
+
+function KitPhotoDialog({ kit, onClose }: { kit: any; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: images = [], isLoading } = useQuery({
+    queryKey: ["kitImages", kit.id],
+    queryFn: () => productKitImagesApi.list(kit.id),
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => productKitImagesApi.upload({ kitId: kit.id, file }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["kitImages", kit.id] }); toast.success("Foto adicionada!"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (img: any) => productKitImagesApi.delete({ id: img.id, storagePath: img.storagePath }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["kitImages", kit.id] }); toast.success("Foto removida!"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) Array.from(files).forEach(f => uploadMutation.mutate(f));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Fotos - {kit.name}</DialogTitle>
+          <DialogDescription>Gerencie as fotos do kit</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const files = e.target.files; if (files) Array.from(files).forEach(f => uploadMutation.mutate(f)); if (cameraInputRef.current) cameraInputRef.current.value = ""; }} />
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={() => cameraInputRef.current?.click()} disabled={uploadMutation.isPending} variant="default">
+              {uploadMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Camera className="mr-2 h-4 w-4" />Tirar Foto</>}
+            </Button>
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploadMutation.isPending} variant="outline">
+              {uploadMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Plus className="mr-2 h-4 w-4" />Galeria</>}
+            </Button>
+          </div>
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : images.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Nenhuma foto adicionada.</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              {images.map((img: any) => (
+                <div key={img.id} className="relative group rounded-lg overflow-hidden border">
+                  <img src={img.url} alt={kit.name} className="w-full h-32 object-cover" />
+                  <Button variant="destructive" size="icon-sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteMutation.mutate(img)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
