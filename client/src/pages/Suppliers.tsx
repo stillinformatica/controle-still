@@ -104,8 +104,8 @@ export default function Suppliers() {
                     </TabsList>
                     <TabsContent value="timeline">
                       {entriesWithBalance.length > 0 ? (
-                        <Table>
-                          <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Tipo</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Saldo</TableHead></TableRow></TableHeader>
+                        <Table className="table-fixed w-full">
+                          <TableHeader><TableRow><TableHead className="w-24">Data</TableHead><TableHead className="w-24">Tipo</TableHead><TableHead>Descrição</TableHead><TableHead className="w-28 text-right">Valor</TableHead><TableHead className="w-28 text-right">Saldo</TableHead></TableRow></TableHeader>
                           <TableBody>
                             {entriesWithBalance.map((e: any, i: number) => (
                               <TableRow key={`${e.type}-${e.id}-${i}`}>
