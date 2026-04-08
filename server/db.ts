@@ -1064,7 +1064,7 @@ export async function getDashboardStats(userId: number) {
     .reduce((sum, e) => sum + parseFloat(e.amount.toString()), 0);
   
   const expensesEdgar = monthExpenses
-    .filter(e => ["casa", "fixas", "mercado", "superfluos"].includes(e.category))
+    .filter(e => e.category !== "still")
     .reduce((sum, e) => sum + parseFloat(e.amount.toString()), 0);
   
   // Lucro do mês (receitas - despesas Still apenas)
