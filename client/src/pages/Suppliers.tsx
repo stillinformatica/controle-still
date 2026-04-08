@@ -125,7 +125,7 @@ export default function Suppliers() {
                     <TabsContent value="timeline">
                       {entriesWithBalance.length > 0 ? (
                         <Table className="table-fixed w-full">
-                          <TableHeader><TableRow><TableHead className="w-24">Data</TableHead><TableHead className="w-24">Tipo</TableHead><TableHead>Descrição</TableHead><TableHead className="w-28 text-right">Valor</TableHead><TableHead className="w-28 text-right">Saldo</TableHead></TableRow></TableHeader>
+                          <TableHeader><TableRow><TableHead className="w-[90px]">Data</TableHead><TableHead className="w-[80px]">Tipo</TableHead><TableHead className="min-w-0 overflow-hidden">Descrição</TableHead><TableHead className="w-[120px] text-right">Valor</TableHead><TableHead className="w-[120px] text-right">Saldo</TableHead></TableRow></TableHeader>
                           <TableBody>
                             {entriesWithBalance.map((e: any, i: number) => (
                               <TableRow key={`${e.type}-${e.id}-${i}`}>
@@ -135,7 +135,7 @@ export default function Suppliers() {
                                     {e.type === 'purchase' ? 'Compra' : 'Pagamento'}
                                   </span>
                                 </TableCell>
-                                <TableCell className="break-words">{e.description || e.notes || '-'}</TableCell>
+                                <TableCell className="break-words overflow-hidden whitespace-normal">{e.description || e.notes || '-'}</TableCell>
                                 <TableCell className={`text-right tabular-nums ${e.type === 'purchase' ? 'text-destructive' : 'text-green-600'}`}>{e.type === 'purchase' ? '+' : '-'}{formatCurrency(e.amount)}</TableCell>
                                 <TableCell className={`text-right tabular-nums font-medium ${e.balance > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(e.balance)}</TableCell>
                               </TableRow>
