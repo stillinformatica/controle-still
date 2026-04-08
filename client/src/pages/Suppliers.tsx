@@ -107,7 +107,7 @@ export default function Suppliers() {
                 if (e.type === 'purchase') runningBalance += parseFloat(e.amount);
                 else runningBalance -= parseFloat(e.amount);
                 return { ...e, balance: runningBalance };
-              });
+              }).reverse();
 
               return (
                 <>
