@@ -381,6 +381,7 @@ export const productKitsApi = {
       await supabase.from("product_kits").insert({
         user_id: userId, name: input.name, description: input.description || null,
         sale_price: salePrice, total_cost: totalCost, profit, profit_margin: profitMargin,
+        category: input.category || null,
       }).select().single()
     );
 
@@ -408,6 +409,7 @@ export const productKitsApi = {
       await supabase.from("product_kits").update({
         name: input.name, description: input.description || null,
         sale_price: salePrice, total_cost: totalCost, profit, profit_margin: profitMargin,
+        category: input.category || null,
         updated_at: new Date().toISOString(),
       }).eq("id", input.id).eq("user_id", userId)
     );
