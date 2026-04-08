@@ -14,9 +14,10 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { servicesApi, bankAccountsApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Wrench, Trash2, Edit } from "lucide-react";
+import { Plus, Wrench, Trash2, Edit, ChevronDown, ChevronRight, User } from "lucide-react";
 import { toast } from "sonner";
 import { getCurrentDateString } from "@/../../shared/timezone";
 
@@ -34,6 +35,7 @@ export default function Services() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
   const [showAllPeriods, setShowAllPeriods] = useState(false);
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
 
   const [formData, setFormData] = useState({
     date: getCurrentDateString(), description: "", serialNumber: "", amount: "", cost: "",
@@ -50,6 +52,25 @@ export default function Services() {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` === selectedMonth;
     });
   }, [allServices, selectedMonth, showAllPeriods]);
+
+  // Group services by customer
+  const groupedByCustomer = useMemo(() => {
+    if (!services) return [];
+    const groups: Record<string, any[]> = {};
+    services.forEach((s: any) => {
+      const key = s.customerName || "Sem cliente";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(s);
+    });
+    return Object.entries(groups)
+      .map(([name, items]) => ({
+        name,
+        items,
+        totalAmount: items.reduce((a, s) => a + parseFloat(s.amount || "0"), 0),
+        totalCost: items.reduce((a, s) => a + parseFloat(s.cost || "0"), 0),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [services]);
 
   const createMutation = useMutation({
     mutationFn: servicesApi.create,
@@ -99,6 +120,14 @@ export default function Services() {
 
   const handleDelete = (id: number) => { if (confirm("Excluir este serviço?")) deleteMutation.mutate({ id }); };
 
+  const toggleCustomer = (name: string) => {
+    setExpandedCustomers(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  };
+
   const formatCurrency = (v: string | number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(typeof v === "string" ? parseFloat(v) : v);
   const formatDate = (ds: string | Date) => { const s = typeof ds === "string" ? ds : ds.toISOString().split("T")[0]; const [y, m, d] = s.split("-"); return `${d}/${m}/${y}`; };
 
@@ -123,36 +152,54 @@ export default function Services() {
         </div>
 
         <Card>
-          <CardHeader><CardTitle>Lista de Serviços</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Serviços por Cliente</CardTitle></CardHeader>
           <CardContent>
             {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
-            : services && services.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>OS</TableHead><TableHead>Cliente</TableHead><TableHead>Descrição</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {services.map((service: any) => (
-                      <TableRow key={service.id}>
-                        <TableCell className="whitespace-nowrap">{formatDate(service.date)}</TableCell>
-                        <TableCell>{service.osNumber || "-"}</TableCell>
-                        <TableCell className="max-w-[150px] truncate">{service.customerName || "-"}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{service.description}</TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${service.serviceType === "repaired" ? "bg-green-100 text-green-800" : service.serviceType === "pending" ? "bg-yellow-100 text-yellow-800" : service.serviceType === "no_repair" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>
-                            {serviceTypeLabels[service.serviceType || "pending"]}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(service.amount || "0")}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(service)}><Edit className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(service.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+            : groupedByCustomer.length > 0 ? (
+              <div className="space-y-2">
+                {groupedByCustomer.map((group) => (
+                  <Collapsible key={group.name} open={expandedCustomers.has(group.name)} onOpenChange={() => toggleCustomer(group.name)}>
+                    <CollapsibleTrigger asChild>
+                      <div className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          {expandedCustomers.has(group.name) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{group.name}</span>
+                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{group.items.length} OS</span>
+                        </div>
+                        <span className="font-semibold tabular-nums text-blue-600">{formatCurrency(group.totalAmount)}</span>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="ml-4 mt-1 border-l-2 border-muted pl-4">
+                        <Table>
+                          <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>OS</TableHead><TableHead>Descrição</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                            {group.items.map((service: any) => (
+                              <TableRow key={service.id}>
+                                <TableCell className="whitespace-nowrap">{formatDate(service.date)}</TableCell>
+                                <TableCell>{service.osNumber || "-"}</TableCell>
+                                <TableCell className="max-w-[200px] truncate">{service.description}</TableCell>
+                                <TableCell>
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${service.serviceType === "repaired" ? "bg-green-100 text-green-800" : service.serviceType === "pending" ? "bg-yellow-100 text-yellow-800" : service.serviceType === "no_repair" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>
+                                    {serviceTypeLabels[service.serviceType || "pending"]}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">{formatCurrency(service.amount || "0")}</TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end space-x-1">
+                                    <Button variant="ghost" size="icon" onClick={() => handleEdit(service)}><Edit className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(service.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12"><Wrench className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground text-center">Nenhum serviço registrado.</p></div>
