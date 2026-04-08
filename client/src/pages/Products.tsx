@@ -434,6 +434,7 @@ function KitsList() {
           </form>
         </DialogContent>
       </Dialog>
+      {photoKit && <KitPhotoDialog kit={photoKit} onClose={() => setPhotoKit(null)} />}
     </>
   );
 }
