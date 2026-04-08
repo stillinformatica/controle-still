@@ -385,6 +385,30 @@ export type Database = {
           },
         ]
       }
+      product_kit_images: {
+        Row: {
+          created_at: string | null
+          id: number
+          kit_id: number
+          storage_path: string
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          kit_id: number
+          storage_path: string
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          kit_id?: number
+          storage_path?: string
+          url?: string
+        }
+        Relationships: []
+      }
       product_kit_items: {
         Row: {
           created_at: string
@@ -411,6 +435,7 @@ export type Database = {
       }
       product_kits: {
         Row: {
+          category: string | null
           created_at: string
           description: string | null
           id: number
@@ -424,6 +449,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           description?: string | null
           id?: number
@@ -437,6 +463,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           description?: string | null
           id?: number
