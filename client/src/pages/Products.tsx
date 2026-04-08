@@ -262,7 +262,7 @@ export default function Products() {
 
 function KitForm({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
-  const [kitForm, setKitForm] = useState({ name: "", description: "", salePrice: "" });
+  const [kitForm, setKitForm] = useState({ name: "", description: "", salePrice: "", category: "" });
   const [selectedItems, setSelectedItems] = useState<Array<{ productId: number; quantity: number; productName: string; cost: string }>>([]);
 
   const { data: products = [] } = useQuery({ queryKey: ["products", { isActive: true }], queryFn: () => productsApi.list({ isActive: true }) });
@@ -277,7 +277,7 @@ function KitForm({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     if (!kitForm.name || !kitForm.salePrice) { toast.error("Preencha nome e preço"); return; }
     if (selectedItems.length === 0) { toast.error("Adicione ao menos um produto"); return; }
-    createKitMutation.mutate({ name: kitForm.name, description: kitForm.description, salePrice: kitForm.salePrice, items: selectedItems.map(i => ({ productId: i.productId, quantity: i.quantity })) });
+    createKitMutation.mutate({ name: kitForm.name, description: kitForm.description, salePrice: kitForm.salePrice, category: kitForm.category, items: selectedItems.map(i => ({ productId: i.productId, quantity: i.quantity })) });
   };
 
   const addProduct = (pid: number) => {
