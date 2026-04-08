@@ -27,9 +27,13 @@ export default function Debtors() {
 
   const { data: allDebtors, isLoading } = useQuery({ queryKey: ["debtors"], queryFn: () => debtorsApi.list(), enabled: !!user });
   const debtors = useMemo(() => {
-    if (!allDebtors || !searchQuery.trim()) return allDebtors;
-    const q = searchQuery.toLowerCase();
-    return allDebtors.filter((d: any) => d.name.toLowerCase().includes(q));
+    if (!allDebtors) return allDebtors;
+    let filtered = allDebtors;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((d: any) => d.name.toLowerCase().includes(q));
+    }
+    return [...filtered].sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [allDebtors, searchQuery]);
   const { data: bankAccounts } = useQuery({ queryKey: ["bankAccounts"], queryFn: () => bankAccountsApi.list(), enabled: !!user });
 
