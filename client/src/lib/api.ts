@@ -941,7 +941,7 @@ export const dashboardApi = {
     const monthServices = (servicesRes.data || []).reduce((s, svc) => s + (svc.amount || 0), 0);
     const monthIncome = monthSales + monthServices;
     const expensesStill = (expensesRes.data || []).filter(e => e.category === "still").reduce((s, e) => s + e.amount, 0);
-    const expensesEdgar = (expensesRes.data || []).filter(e => e.category === "casa").reduce((s, e) => s + e.amount, 0);
+    const expensesEdgar = (expensesRes.data || []).filter(e => e.category !== "still").reduce((s, e) => s + e.amount, 0);
     const totalExpenses = (expensesRes.data || []).reduce((s, e) => s + e.amount, 0);
 
     return {
