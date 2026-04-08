@@ -920,7 +920,7 @@ export const dashboardApi = {
     const monthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, "0")}`;
 
     const [accountsRes, investmentsRes, debtorsRes, salesRes, servicesRes, expensesRes] = await Promise.all([
-      supabase.from("bank_accounts").select("balance").eq("user_id", userId).eq("is_active", true),
+      supabase.from("bank_accounts").select("balance, name").eq("user_id", userId).eq("is_active", true),
       supabase.from("investments").select("shares, purchase_price, current_price").eq("user_id", userId).eq("is_active", true),
       supabase.from("debtors").select("remaining_amount").eq("user_id", userId).neq("status", "paid"),
       supabase.from("sales").select("amount, cost, profit").eq("user_id", userId).gte("date", monthStart).lte("date", monthEnd),
@@ -928,9 +928,15 @@ export const dashboardApi = {
       supabase.from("expenses").select("amount, category").eq("user_id", userId).gte("date", monthStart).lte("date", monthEnd),
     ]);
 
-    const totalBalance = (accountsRes.data || []).reduce((s, a) => s + a.balance, 0);
+    const marketplaceKeywords = ["shopee", "mercado livre", "mercadolivre", "mercado pago"];
+    const isMarketplace = (name: string) => marketplaceKeywords.some(kw => name.toLowerCase().includes(kw));
+    const allAccounts = accountsRes.data || [];
+    const businessAccounts = allAccounts.filter(a => !isMarketplace(a.name));
+    const marketplaceAccounts = allAccounts.filter(a => isMarketplace(a.name));
+    const totalBalance = businessAccounts.reduce((s, a) => s + a.balance, 0);
+    const totalMarketplace = marketplaceAccounts.reduce((s, a) => s + a.balance, 0);
     const totalInvestments = (investmentsRes.data || []).reduce((s, i) => s + i.shares * (i.current_price || i.purchase_price), 0);
-    const totalDebtors = (debtorsRes.data || []).reduce((s, d) => s + d.remaining_amount, 0);
+    const totalDebtors = (debtorsRes.data || []).reduce((s, d) => s + d.remaining_amount, 0) + totalMarketplace;
     const monthSales = (salesRes.data || []).reduce((s, sale) => s + sale.amount, 0);
     const monthServices = (servicesRes.data || []).reduce((s, svc) => s + (svc.amount || 0), 0);
     const monthIncome = monthSales + monthServices;
