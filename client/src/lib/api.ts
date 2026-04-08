@@ -761,6 +761,20 @@ export const suppliersApi = {
     const userId = await getUserId();
     throwIfError(await supabase.from("suppliers").delete().eq("id", input.id).eq("user_id", userId));
   },
+  getPurchases: async (supplierName: string) => {
+    const userId = await getUserId();
+    const data = throwIfError(
+      await supabase.from("purchases").select("*").eq("user_id", userId).eq("supplier", supplierName).order("date", { ascending: false })
+    );
+    return mapKeys(data);
+  },
+  getPayments: async (supplierName: string) => {
+    const userId = await getUserId();
+    const data = throwIfError(
+      await supabase.from("supplier_payments").select("*").eq("user_id", userId).eq("supplier_name", supplierName).order("date", { ascending: false })
+    );
+    return mapKeys(data);
+  },
 };
 
 // ── Collaborators ───────────────────────────────────────────────────────────
