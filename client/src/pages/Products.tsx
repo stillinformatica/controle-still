@@ -439,6 +439,74 @@ function KitsList() {
   );
 }
 
+function KitPhotoDialog({ kit, onClose }: { kit: any; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: images = [], isLoading } = useQuery({
+    queryKey: ["kitImages", kit.id],
+    queryFn: () => productKitImagesApi.list(kit.id),
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => productKitImagesApi.upload({ kitId: kit.id, file }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["kitImages", kit.id] }); toast.success("Foto adicionada!"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (img: any) => productKitImagesApi.delete({ id: img.id, storagePath: img.storagePath }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["kitImages", kit.id] }); toast.success("Foto removida!"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) Array.from(files).forEach(f => uploadMutation.mutate(f));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Fotos - {kit.name}</DialogTitle>
+          <DialogDescription>Gerencie as fotos do kit</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const files = e.target.files; if (files) Array.from(files).forEach(f => uploadMutation.mutate(f)); if (cameraInputRef.current) cameraInputRef.current.value = ""; }} />
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={() => cameraInputRef.current?.click()} disabled={uploadMutation.isPending} variant="default">
+              {uploadMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Camera className="mr-2 h-4 w-4" />Tirar Foto</>}
+            </Button>
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploadMutation.isPending} variant="outline">
+              {uploadMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : <><Plus className="mr-2 h-4 w-4" />Galeria</>}
+            </Button>
+          </div>
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : images.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Nenhuma foto adicionada.</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              {images.map((img: any) => (
+                <div key={img.id} className="relative group rounded-lg overflow-hidden border">
+                  <img src={img.url} alt={kit.name} className="w-full h-32 object-cover" />
+                  <Button variant="destructive" size="icon-sm" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteMutation.mutate(img)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function PhotoDialog({ product, onClose }: { product: any; onClose: () => void }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
