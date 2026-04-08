@@ -11,10 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { productsApi, productKitsApi, bankAccountsApi, productImagesApi } from "@/lib/api";
+import { productsApi, productKitsApi, bankAccountsApi, productImagesApi, productKitImagesApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React from "react";
-import { Plus, Package, Trash2, Edit, ShoppingCart, X, AlertTriangle, Camera, Megaphone, Loader2, FlaskConical, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Package, Trash2, Edit, ShoppingCart, X, AlertTriangle, Camera, Megaphone, Loader2, FlaskConical, RefreshCw, CheckCircle2, XCircle, ImageIcon } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import PriceTableExport from "@/components/PriceTableExport";
 import { toast } from "sonner";
