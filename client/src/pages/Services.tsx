@@ -208,13 +208,15 @@ export default function Services() {
                     <CollapsibleContent>
                       <div className="ml-4 mt-1 border-l-2 border-muted pl-4">
                         <Table>
-                          <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>OS</TableHead><TableHead>Descrição</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
+                          <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>OS</TableHead><TableHead>Descrição</TableHead><TableHead>Nº Série</TableHead><TableHead>Armazenamento</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
                           <TableBody>
                             {group.items.map((service: any) => (
                               <TableRow key={service.id}>
                                 <TableCell className="whitespace-nowrap">{formatDate(service.date)}</TableCell>
                                 <TableCell>{service.osNumber || "-"}</TableCell>
                                 <TableCell className="max-w-[200px] truncate">{service.description}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground">{service.serialNumber || "-"}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground">{service.storageLocation || "-"}</TableCell>
                                 <TableCell>
                                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${service.serviceType === "repaired" ? "bg-green-100 text-green-800" : service.serviceType === "pending" ? "bg-yellow-100 text-yellow-800" : service.serviceType === "no_repair" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>
                                     {serviceTypeLabels[service.serviceType || "pending"]}
