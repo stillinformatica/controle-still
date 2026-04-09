@@ -496,12 +496,18 @@ export const salesApi = {
       }
     }
 
-    // Update bank account balance if applicable
+    // Update bank account balance and create transaction if applicable
     if (input.accountId && input.source !== "debtor") {
       const { data: account } = await supabase.from("bank_accounts").select("balance").eq("id", input.accountId).single();
       if (account) {
         await supabase.from("bank_accounts").update({ balance: account.balance + totalAmount }).eq("id", input.accountId);
       }
+      // Create transaction record
+      await supabase.from("transactions").insert({
+        user_id: userId, account_id: input.accountId, date: input.date,
+        description: `Venda: ${input.description}`, amount: totalAmount,
+        type: "income" as any, category: "sale", is_personal: false,
+      });
     }
 
     // Create debtor if source is debtor
