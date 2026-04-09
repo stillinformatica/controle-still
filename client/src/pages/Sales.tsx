@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { salesApi, bankAccountsApi, productsApi, productKitsApi } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, ShoppingCart, Trash2, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
