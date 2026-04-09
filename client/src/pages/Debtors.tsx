@@ -84,7 +84,14 @@ export default function Debtors() {
   };
 
   const handleEdit = (debtor: any) => { setEditingDebtor(debtor); setFormData({ name: debtor.name, totalAmount: debtor.totalAmount, paidAmount: debtor.paidAmount, description: debtor.description || "" }); setIsDialogOpen(true); };
-  const handleDelete = (id: number) => { if (confirm("Excluir?")) deleteMutation.mutate({ id }); };
+  const handleDelete = (debtor: any) => {
+    if (confirm("Excluir?")) {
+      // Delete all grouped debtor records
+      for (const id of (debtor._ids || [debtor.id])) {
+        deleteMutation.mutate({ id });
+      }
+    }
+  };
   const handleOpenPayment = (debtor: any) => { setSelectedDebtor(debtor); setIsPaymentDialogOpen(true); };
   const handleOpenHistory = (debtor: any) => { setHistoryDebtor(debtor); setIsHistoryDialogOpen(true); };
 
