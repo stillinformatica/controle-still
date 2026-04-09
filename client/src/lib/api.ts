@@ -912,6 +912,13 @@ export const debtorsApi = {
     );
     return mapKeys(data);
   },
+  listPaymentsByIds: async (input: { debtorIds: number[] }) => {
+    const userId = await getUserId();
+    const data = throwIfError(
+      await supabase.from("debtor_payments").select("*").eq("user_id", userId).in("debtor_id", input.debtorIds).order("date", { ascending: false })
+    );
+    return mapKeys(data);
+  },
 };
 
 // ── Purchases ───────────────────────────────────────────────────────────────
