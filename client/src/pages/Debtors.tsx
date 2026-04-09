@@ -57,9 +57,9 @@ export default function Debtors() {
   const { data: bankAccounts } = useQuery({ queryKey: ["bankAccounts"], queryFn: () => bankAccountsApi.list(), enabled: !!user });
 
   const { data: debtorPayments, isLoading: isLoadingPayments } = useQuery({
-    queryKey: ["debtorPayments", historyDebtor?.id],
-    queryFn: () => debtorsApi.listPayments({ debtorId: historyDebtor.id }),
-    enabled: !!historyDebtor?.id,
+    queryKey: ["debtorPayments", historyDebtor?._ids],
+    queryFn: () => debtorsApi.listPaymentsByIds({ debtorIds: historyDebtor._ids }),
+    enabled: !!historyDebtor?._ids?.length,
   });
 
   const { data: debtorSales, isLoading: isLoadingSales } = useQuery({
