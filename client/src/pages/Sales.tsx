@@ -439,8 +439,8 @@ export default function Sales() {
         <Dialog open={isDialogOpen} onOpenChange={(open) => { if (open) setIsDialogOpen(true); }}>
           <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>Nova Venda</DialogTitle>
-              <DialogDescription>Adicione múltiplos itens à venda</DialogDescription>
+              <DialogTitle>{editingSaleId ? "Editar Venda" : "Nova Venda"}</DialogTitle>
+              <DialogDescription>{editingSaleId ? "Edite os dados da venda" : "Adicione múltiplos itens à venda"}</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
               <div className="space-y-6 py-4 overflow-y-auto flex-1">
