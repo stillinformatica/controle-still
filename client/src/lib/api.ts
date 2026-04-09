@@ -563,6 +563,101 @@ export const salesApi = {
 
     throwIfError(await supabase.from("sales").delete().eq("id", input.id).eq("user_id", userId));
   },
+  update: async (input: any) => {
+    const userId = await getUserId();
+
+    // Get old sale to revert effects
+    const { data: oldSale } = await supabase.from("sales").select("*").eq("id", input.id).eq("user_id", userId).single();
+    if (!oldSale) throw new Error("Venda não encontrada");
+
+    // Revert old stock
+    const { data: oldItems } = await supabase.from("sale_items").select("*").eq("sale_id", input.id);
+    if (oldItems) {
+      for (const item of oldItems) {
+        if (item.product_id) {
+          const { data: product } = await supabase.from("products").select("quantity").eq("id", item.product_id).single();
+          if (product) {
+            await supabase.from("products").update({ quantity: product.quantity + item.quantity }).eq("id", item.product_id);
+          }
+        }
+      }
+      await supabase.from("sale_items").delete().eq("sale_id", input.id);
+    }
+
+    // Revert old bank balance
+    if (oldSale.account_id && oldSale.source !== "debtor") {
+      const { data: account } = await supabase.from("bank_accounts").select("balance").eq("id", oldSale.account_id).single();
+      if (account) {
+        await supabase.from("bank_accounts").update({ balance: account.balance - oldSale.amount }).eq("id", oldSale.account_id);
+      }
+    }
+
+    // Revert old debtor
+    if (oldSale.source === "debtor" && oldSale.customer_name) {
+      const { data: debtors } = await supabase.from("debtors")
+        .select("*").eq("user_id", userId).eq("name", oldSale.customer_name)
+        .eq("total_amount", oldSale.amount).order("created_at", { ascending: false }).limit(1);
+      if (debtors && debtors.length > 0) {
+        await supabase.from("debtor_payments").delete().eq("debtor_id", debtors[0].id);
+        await supabase.from("debtors").delete().eq("id", debtors[0].id).eq("user_id", userId);
+      }
+    }
+
+    // Calculate new totals
+    let totalAmount = 0;
+    let totalCost = 0;
+    for (const item of input.items) {
+      totalAmount += item.unitPrice * item.quantity;
+      totalCost += (item.unitCost || 0) * item.quantity;
+    }
+    const totalProfit = totalAmount - totalCost;
+
+    // Update sale
+    const sale = throwIfError(
+      await supabase.from("sales").update({
+        date: input.date, description: input.description,
+        amount: totalAmount, cost: totalCost, profit: totalProfit,
+        source: input.source, customer_name: input.customerName || null,
+        account_id: input.accountId || null, updated_at: new Date().toISOString(),
+      }).eq("id", input.id).eq("user_id", userId).select().single()
+    );
+
+    // Create new sale items & decrease stock
+    for (const item of input.items) {
+      await supabase.from("sale_items").insert({
+        sale_id: input.id, description: item.description,
+        product_id: item.productId || null, quantity: item.quantity,
+        unit_price: item.unitPrice, unit_cost: item.unitCost || 0,
+        total_price: item.unitPrice * item.quantity,
+        total_cost: (item.unitCost || 0) * item.quantity,
+      });
+      if (item.productId && !item.isKit) {
+        const { data: product } = await supabase.from("products").select("quantity").eq("id", item.productId).single();
+        if (product) {
+          await supabase.from("products").update({ quantity: Math.max(0, product.quantity - item.quantity) }).eq("id", item.productId);
+        }
+      }
+    }
+
+    // Apply new bank balance
+    if (input.accountId && input.source !== "debtor") {
+      const { data: account } = await supabase.from("bank_accounts").select("balance").eq("id", input.accountId).single();
+      if (account) {
+        await supabase.from("bank_accounts").update({ balance: account.balance + totalAmount }).eq("id", input.accountId);
+      }
+    }
+
+    // Create new debtor if needed
+    if (input.source === "debtor" && input.customerName) {
+      await supabase.from("debtors").insert({
+        user_id: userId, name: input.customerName,
+        total_amount: totalAmount, remaining_amount: totalAmount,
+        description: input.description,
+      });
+    }
+
+    return mapKeys(sale);
+  },
 };
 
 // ── Services ────────────────────────────────────────────────────────────────
