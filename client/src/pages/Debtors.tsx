@@ -30,12 +30,29 @@ export default function Debtors() {
   const { data: allDebtors, isLoading } = useQuery({ queryKey: ["debtors"], queryFn: () => debtorsApi.list(), enabled: !!user });
   const debtors = useMemo(() => {
     if (!allDebtors) return allDebtors;
-    let filtered = allDebtors;
+    // Group debtors by name (case-insensitive)
+    const grouped = new Map<string, any>();
+    for (const d of allDebtors) {
+      const key = d.name.trim().toUpperCase();
+      if (grouped.has(key)) {
+        const existing = grouped.get(key);
+        existing.totalAmount = (parseFloat(existing.totalAmount) + parseFloat(d.totalAmount)).toString();
+        existing.paidAmount = (parseFloat(existing.paidAmount) + parseFloat(d.paidAmount)).toString();
+        existing.remainingAmount = (parseFloat(existing.remainingAmount) + parseFloat(d.remainingAmount)).toString();
+        existing._ids.push(d.id);
+        if (d.description && !existing.description?.includes(d.description)) {
+          existing.description = existing.description ? `${existing.description}; ${d.description}` : d.description;
+        }
+      } else {
+        grouped.set(key, { ...d, _ids: [d.id] });
+      }
+    }
+    let filtered = Array.from(grouped.values());
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter((d: any) => d.name.toLowerCase().includes(q));
     }
-    return [...filtered].sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'));
+    return filtered.sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [allDebtors, searchQuery]);
   const { data: bankAccounts } = useQuery({ queryKey: ["bankAccounts"], queryFn: () => bankAccountsApi.list(), enabled: !!user });
 
