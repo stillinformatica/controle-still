@@ -30,19 +30,36 @@ export default function Debtors() {
   const { data: allDebtors, isLoading } = useQuery({ queryKey: ["debtors"], queryFn: () => debtorsApi.list(), enabled: !!user });
   const debtors = useMemo(() => {
     if (!allDebtors) return allDebtors;
-    let filtered = allDebtors;
+    // Group debtors by name (case-insensitive)
+    const grouped = new Map<string, any>();
+    for (const d of allDebtors) {
+      const key = d.name.trim().toUpperCase();
+      if (grouped.has(key)) {
+        const existing = grouped.get(key);
+        existing.totalAmount = (parseFloat(existing.totalAmount) + parseFloat(d.totalAmount)).toString();
+        existing.paidAmount = (parseFloat(existing.paidAmount) + parseFloat(d.paidAmount)).toString();
+        existing.remainingAmount = (parseFloat(existing.remainingAmount) + parseFloat(d.remainingAmount)).toString();
+        existing._ids.push(d.id);
+        if (d.description && !existing.description?.includes(d.description)) {
+          existing.description = existing.description ? `${existing.description}; ${d.description}` : d.description;
+        }
+      } else {
+        grouped.set(key, { ...d, _ids: [d.id] });
+      }
+    }
+    let filtered = Array.from(grouped.values());
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter((d: any) => d.name.toLowerCase().includes(q));
     }
-    return [...filtered].sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'));
+    return filtered.sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [allDebtors, searchQuery]);
   const { data: bankAccounts } = useQuery({ queryKey: ["bankAccounts"], queryFn: () => bankAccountsApi.list(), enabled: !!user });
 
   const { data: debtorPayments, isLoading: isLoadingPayments } = useQuery({
-    queryKey: ["debtorPayments", historyDebtor?.id],
-    queryFn: () => debtorsApi.listPayments({ debtorId: historyDebtor.id }),
-    enabled: !!historyDebtor?.id,
+    queryKey: ["debtorPayments", historyDebtor?._ids],
+    queryFn: () => debtorsApi.listPaymentsByIds({ debtorIds: historyDebtor._ids }),
+    enabled: !!historyDebtor?._ids?.length,
   });
 
   const { data: debtorSales, isLoading: isLoadingSales } = useQuery({
@@ -67,7 +84,14 @@ export default function Debtors() {
   };
 
   const handleEdit = (debtor: any) => { setEditingDebtor(debtor); setFormData({ name: debtor.name, totalAmount: debtor.totalAmount, paidAmount: debtor.paidAmount, description: debtor.description || "" }); setIsDialogOpen(true); };
-  const handleDelete = (id: number) => { if (confirm("Excluir?")) deleteMutation.mutate({ id }); };
+  const handleDelete = (debtor: any) => {
+    if (confirm("Excluir?")) {
+      // Delete all grouped debtor records
+      for (const id of (debtor._ids || [debtor.id])) {
+        deleteMutation.mutate({ id });
+      }
+    }
+  };
   const handleOpenPayment = (debtor: any) => { setSelectedDebtor(debtor); setIsPaymentDialogOpen(true); };
   const handleOpenHistory = (debtor: any) => { setHistoryDebtor(debtor); setIsHistoryDialogOpen(true); };
 
@@ -132,7 +156,7 @@ export default function Debtors() {
                     <div className="flex space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => handleOpenHistory(debtor)} title="Histórico"><History className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(debtor)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(debtor.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(debtor)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
