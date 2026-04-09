@@ -496,12 +496,18 @@ export const salesApi = {
       }
     }
 
-    // Update bank account balance if applicable
+    // Update bank account balance and create transaction if applicable
     if (input.accountId && input.source !== "debtor") {
       const { data: account } = await supabase.from("bank_accounts").select("balance").eq("id", input.accountId).single();
       if (account) {
         await supabase.from("bank_accounts").update({ balance: account.balance + totalAmount }).eq("id", input.accountId);
       }
+      // Create transaction record
+      await supabase.from("transactions").insert({
+        user_id: userId, account_id: input.accountId, date: input.date,
+        description: `Venda: ${input.description}`, amount: totalAmount,
+        type: "income" as any, category: "sale", is_personal: false,
+      });
     }
 
     // Create debtor if source is debtor
@@ -535,12 +541,16 @@ export const salesApi = {
       await supabase.from("sale_items").delete().eq("sale_id", input.id);
     }
 
-    // Revert bank account balance
+    // Revert bank account balance and delete transaction
     if (sale.account_id && sale.source !== "debtor") {
       const { data: account } = await supabase.from("bank_accounts").select("balance").eq("id", sale.account_id).single();
       if (account) {
         await supabase.from("bank_accounts").update({ balance: account.balance - sale.amount }).eq("id", sale.account_id);
       }
+      // Remove related transaction
+      await supabase.from("transactions").delete()
+        .eq("user_id", userId).eq("account_id", sale.account_id)
+        .eq("amount", sale.amount).ilike("description", `Venda:%`).limit(1);
     }
 
     // Revert debtor if source was debtor
@@ -880,7 +890,27 @@ export const debtorsApi = {
       if (account) {
         await supabase.from("bank_accounts").update({ balance: account.balance + amount }).eq("id", input.accountId);
       }
+      // Create transaction record for debtor payment
+      await supabase.from("transactions").insert({
+        user_id: userId, account_id: input.accountId, date: input.date,
+        description: `Pagamento devedor: ${debtor?.name || ''}`, amount,
+        type: "income" as any, category: "debtor_payment", is_personal: false,
+      });
     }
+  },
+  listPayments: async (input: { debtorId: number }) => {
+    const userId = await getUserId();
+    const data = throwIfError(
+      await supabase.from("debtor_payments").select("*").eq("user_id", userId).eq("debtor_id", input.debtorId).order("date", { ascending: false })
+    );
+    return mapKeys(data);
+  },
+  listSalesByCustomer: async (input: { customerName: string }) => {
+    const userId = await getUserId();
+    const data = throwIfError(
+      await supabase.from("sales").select("*").eq("user_id", userId).eq("customer_name", input.customerName).order("date", { ascending: false })
+    );
+    return mapKeys(data);
   },
 };
 
