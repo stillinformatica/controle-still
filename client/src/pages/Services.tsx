@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,19 @@ const serviceTypeLabels: Record<string, string> = {
   no_repair: "Sem Reparo", repaired: "Reparado", test: "Teste", pending: "Pendente",
 };
 
+interface ServiceItem {
+  description: string;
+  serialNumber: string;
+  amount: string;
+  cost: string;
+  serviceType: string;
+  storageLocation: string;
+}
+
+const emptyItem = (): ServiceItem => ({
+  description: "", serialNumber: "", amount: "", cost: "", serviceType: "pending", storageLocation: "",
+});
+
 export default function Services() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -39,13 +52,29 @@ export default function Services() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"open" | "completed" | "all">("open");
 
-  const [formData, setFormData] = useState({
-    date: getCurrentDateString(), description: "", serialNumber: "", amount: "", cost: "",
-    customerName: "", osNumber: "", serviceType: "pending" as any, accountId: "", storageLocation: "",
+  // Form state for new services (multi-item)
+  const [formDate, setFormDate] = useState(getCurrentDateString());
+  const [formCustomerName, setFormCustomerName] = useState("");
+  const [formOsNumber, setFormOsNumber] = useState("");
+  const [formAccountId, setFormAccountId] = useState("");
+  const [formItems, setFormItems] = useState<ServiceItem[]>([emptyItem()]);
+
+  // Single-edit form state
+  const [editFormData, setEditFormData] = useState({
+    date: "", description: "", serialNumber: "", amount: "", cost: "",
+    customerName: "", osNumber: "", serviceType: "pending", accountId: "", storageLocation: "",
   });
 
   const { data: allServices, isLoading } = useQuery({ queryKey: ["services"], queryFn: () => servicesApi.list(), enabled: !!user });
   const { data: accounts } = useQuery({ queryKey: ["bankAccounts"], queryFn: () => bankAccountsApi.list(), enabled: !!user });
+
+  // Auto-fetch next OS number when opening new dialog
+  const fetchNextOS = async () => {
+    try {
+      const next = await servicesApi.getNextOSNumber();
+      setFormOsNumber(next);
+    } catch { setFormOsNumber(""); }
+  };
 
   const services = useMemo(() => {
     if (!allServices) return allServices;
@@ -72,7 +101,6 @@ export default function Services() {
     return filtered;
   }, [allServices, selectedMonth, showAllPeriods, statusFilter, searchQuery]);
 
-  // Group services by customer
   const groupedByCustomer = useMemo(() => {
     if (!services) return [];
     const groups: Record<string, any[]> = {};
@@ -83,8 +111,7 @@ export default function Services() {
     });
     return Object.entries(groups)
       .map(([name, items]) => ({
-        name,
-        items,
+        name, items,
         totalAmount: items.reduce((a, s) => a + parseFloat(s.amount || "0"), 0),
         totalCost: items.reduce((a, s) => a + parseFloat(s.cost || "0"), 0),
       }))
@@ -93,7 +120,7 @@ export default function Services() {
 
   const createMutation = useMutation({
     mutationFn: servicesApi.create,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["services"] }); queryClient.invalidateQueries({ queryKey: ["dashboard"] }); toast.success("Serviço registrado!"); resetForm(); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["services"] }); queryClient.invalidateQueries({ queryKey: ["dashboard"] }); },
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
   const updateMutation = useMutation({
@@ -108,27 +135,66 @@ export default function Services() {
   });
 
   const resetForm = () => {
-    setFormData({ date: getCurrentDateString(), description: "", serialNumber: "", amount: "", cost: "", customerName: "", osNumber: "", serviceType: "pending", accountId: "", storageLocation: "" });
-    setEditingService(null); setIsDialogOpen(false);
+    setFormDate(getCurrentDateString());
+    setFormCustomerName("");
+    setFormOsNumber("");
+    setFormAccountId("");
+    setFormItems([emptyItem()]);
+    setEditingService(null);
+    setIsDialogOpen(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleOpenNew = () => {
+    setEditingService(null);
+    setFormDate(getCurrentDateString());
+    setFormCustomerName("");
+    setFormAccountId("");
+    setFormItems([emptyItem()]);
+    fetchNextOS();
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmitNew = async (e: React.FormEvent) => {
     e.preventDefault();
-    const submitData: any = { date: formData.date, description: formData.description, serviceType: formData.serviceType };
-    if (formData.serialNumber) submitData.serialNumber = formData.serialNumber;
-    if (formData.amount) submitData.amount = formData.amount;
-    if (formData.cost) submitData.cost = formData.cost;
-    if (formData.customerName) submitData.customerName = formData.customerName;
-    if (formData.osNumber) submitData.osNumber = formData.osNumber;
-    if (formData.accountId) submitData.accountId = parseInt(formData.accountId);
-    if (formData.storageLocation) submitData.storageLocation = formData.storageLocation;
-    if (editingService) updateMutation.mutate({ id: editingService.id, ...submitData });
-    else createMutation.mutate(submitData);
+    const validItems = formItems.filter(i => i.description.trim());
+    if (validItems.length === 0) { toast.error("Adicione pelo menos um item"); return; }
+
+    try {
+      for (const item of validItems) {
+        await createMutation.mutateAsync({
+          date: formDate,
+          description: item.description,
+          serialNumber: item.serialNumber || undefined,
+          amount: item.amount || undefined,
+          cost: item.cost || undefined,
+          customerName: formCustomerName || undefined,
+          osNumber: formOsNumber || undefined,
+          serviceType: item.serviceType || "pending",
+          accountId: formAccountId ? parseInt(formAccountId) : undefined,
+          storageLocation: item.storageLocation || undefined,
+        });
+      }
+      toast.success(`${validItems.length} serviço(s) registrado(s)!`);
+      resetForm();
+    } catch { /* error handled by mutation */ }
+  };
+
+  const handleSubmitEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const submitData: any = { id: editingService.id, date: editFormData.date, description: editFormData.description, serviceType: editFormData.serviceType };
+    if (editFormData.serialNumber) submitData.serialNumber = editFormData.serialNumber;
+    if (editFormData.amount) submitData.amount = editFormData.amount;
+    if (editFormData.cost) submitData.cost = editFormData.cost;
+    if (editFormData.customerName) submitData.customerName = editFormData.customerName;
+    if (editFormData.osNumber) submitData.osNumber = editFormData.osNumber;
+    if (editFormData.accountId) submitData.accountId = parseInt(editFormData.accountId);
+    if (editFormData.storageLocation) submitData.storageLocation = editFormData.storageLocation;
+    updateMutation.mutate(submitData);
   };
 
   const handleEdit = (service: any) => {
     setEditingService(service);
-    setFormData({
+    setEditFormData({
       date: service.date, description: service.description, serialNumber: service.serialNumber || "",
       amount: service.amount || "", cost: service.cost || "", customerName: service.customerName || "",
       osNumber: service.osNumber || "", serviceType: service.serviceType || "pending",
@@ -147,6 +213,12 @@ export default function Services() {
     });
   };
 
+  const updateItem = (index: number, field: keyof ServiceItem, value: string) => {
+    setFormItems(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+  };
+  const addItem = () => setFormItems(prev => [...prev, emptyItem()]);
+  const removeItem = (index: number) => { if (formItems.length > 1) setFormItems(prev => prev.filter((_, i) => i !== index)); };
+
   const formatCurrency = (v: string | number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(typeof v === "string" ? parseFloat(v) : v);
   const formatDate = (ds: string | Date) => { const s = typeof ds === "string" ? ds : ds.toISOString().split("T")[0]; const [y, m, d] = s.split("-"); return `${d}/${m}/${y}`; };
 
@@ -161,7 +233,7 @@ export default function Services() {
             <Label htmlFor="month-filter" className="text-sm whitespace-nowrap">Período:</Label>
             <Input id="month-filter" type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-40" disabled={showAllPeriods} />
             <Button variant={showAllPeriods ? "default" : "outline"} size="sm" onClick={() => setShowAllPeriods(!showAllPeriods)}>{showAllPeriods ? "Filtrar" : "Todos"}</Button>
-            <Button onClick={() => setIsDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Novo Serviço</Button>
+            <Button onClick={handleOpenNew}><Plus className="mr-2 h-4 w-4" />Novo Serviço</Button>
           </div>
         </div>
 
@@ -185,7 +257,7 @@ export default function Services() {
             </div>
             <div className="relative mt-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar por cliente, número de OS, descrição, número de série ou armazenamento..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+              <Input placeholder="Buscar por cliente, OS, descrição, nº série ou armazenamento..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
             </div>
           </CardHeader>
           <CardContent>
@@ -244,41 +316,101 @@ export default function Services() {
           </CardContent>
         </Card>
 
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (open) setIsDialogOpen(true); }}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>{editingService ? "Editar Serviço" : "Novo Serviço"}</DialogTitle><DialogDescription>Preencha as informações do serviço</DialogDescription></DialogHeader>
-            <form onSubmit={handleSubmit}>
+        {/* Dialog for NEW service (multi-item) */}
+        <Dialog open={isDialogOpen && !editingService} onOpenChange={(open) => { if (!open) resetForm(); else if (!editingService) handleOpenNew(); }}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Novo Serviço</DialogTitle><DialogDescription>Preencha os dados e adicione itens</DialogDescription></DialogHeader>
+            <form onSubmit={handleSubmitNew}>
               <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Data</Label><Input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required /></div>
-                  <div className="space-y-2"><Label>Nº OS</Label><Input value={formData.osNumber} onChange={(e) => setFormData({ ...formData, osNumber: e.target.value })} /></div>
-                </div>
-                <div className="space-y-2"><Label>Cliente</Label><Input value={formData.customerName} onChange={(e) => setFormData({ ...formData, customerName: e.target.value })} /></div>
-                <div className="space-y-2"><Label>Descrição *</Label><Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required /></div>
-                <div className="space-y-2"><Label>Nº Série</Label><Input value={formData.serialNumber} onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })} /></div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Valor</Label><Input type="number" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} /></div>
-                  <div className="space-y-2"><Label>Custo</Label><Input type="number" step="0.01" value={formData.cost} onChange={(e) => setFormData({ ...formData, cost: e.target.value })} /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Status</Label>
-                    <Select value={formData.serviceType} onValueChange={(v: any) => setFormData({ ...formData, serviceType: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="pending">Pendente</SelectItem><SelectItem value="repaired">Reparado</SelectItem><SelectItem value="no_repair">Sem Reparo</SelectItem><SelectItem value="test">Teste</SelectItem></SelectContent>
-                    </Select>
-                  </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2"><Label>Data</Label><Input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} required /></div>
+                  <div className="space-y-2"><Label>Nº OS (auto)</Label><Input value={formOsNumber} onChange={(e) => setFormOsNumber(e.target.value)} /></div>
                   <div className="space-y-2"><Label>Conta</Label>
-                    <Select value={formData.accountId} onValueChange={(v) => setFormData({ ...formData, accountId: v })}>
+                    <Select value={formAccountId} onValueChange={setFormAccountId}>
                       <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                       <SelectContent>{accounts?.map((acc: any) => (<SelectItem key={acc.id} value={acc.id.toString()}>{acc.name}</SelectItem>))}</SelectContent>
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2"><Label>Local de Armazenamento</Label><Input value={formData.storageLocation} onChange={(e) => setFormData({ ...formData, storageLocation: e.target.value })} /></div>
+                <div className="space-y-2"><Label>Cliente</Label><Input value={formCustomerName} onChange={(e) => setFormCustomerName(e.target.value)} /></div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Itens ({formItems.length})</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addItem}><Plus className="mr-1 h-3 w-3" />Adicionar Item</Button>
+                  </div>
+                  {formItems.map((item, idx) => (
+                    <Card key={idx} className="p-3">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1"><Label className="text-xs">Descrição *</Label><Input value={item.description} onChange={(e) => updateItem(idx, "description", e.target.value)} required placeholder="Descrição do serviço" /></div>
+                            <div className="space-y-1"><Label className="text-xs">Nº Série</Label><Input value={item.serialNumber} onChange={(e) => updateItem(idx, "serialNumber", e.target.value)} /></div>
+                          </div>
+                          <div className="grid grid-cols-4 gap-3">
+                            <div className="space-y-1"><Label className="text-xs">Valor</Label><Input type="number" step="0.01" value={item.amount} onChange={(e) => updateItem(idx, "amount", e.target.value)} /></div>
+                            <div className="space-y-1"><Label className="text-xs">Custo</Label><Input type="number" step="0.01" value={item.cost} onChange={(e) => updateItem(idx, "cost", e.target.value)} /></div>
+                            <div className="space-y-1"><Label className="text-xs">Status</Label>
+                              <Select value={item.serviceType} onValueChange={(v) => updateItem(idx, "serviceType", v)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent><SelectItem value="pending">Pendente</SelectItem><SelectItem value="repaired">Reparado</SelectItem><SelectItem value="no_repair">Sem Reparo</SelectItem><SelectItem value="test">Teste</SelectItem></SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1"><Label className="text-xs">Armazenamento</Label><Input value={item.storageLocation} onChange={(e) => updateItem(idx, "storageLocation", e.target.value)} /></div>
+                          </div>
+                        </div>
+                        {formItems.length > 1 && (
+                          <Button type="button" variant="ghost" size="icon" className="mt-5 shrink-0" onClick={() => removeItem(idx)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>{editingService ? "Salvar" : "Registrar"}</Button>
+                <Button type="submit" disabled={createMutation.isPending}>Registrar {formItems.filter(i => i.description.trim()).length} item(ns)</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog for EDIT service (single) */}
+        <Dialog open={isDialogOpen && !!editingService} onOpenChange={(open) => { if (!open) resetForm(); }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Editar Serviço</DialogTitle><DialogDescription>Atualize as informações do serviço</DialogDescription></DialogHeader>
+            <form onSubmit={handleSubmitEdit}>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Data</Label><Input type="date" value={editFormData.date} onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })} required /></div>
+                  <div className="space-y-2"><Label>Nº OS</Label><Input value={editFormData.osNumber} onChange={(e) => setEditFormData({ ...editFormData, osNumber: e.target.value })} /></div>
+                </div>
+                <div className="space-y-2"><Label>Cliente</Label><Input value={editFormData.customerName} onChange={(e) => setEditFormData({ ...editFormData, customerName: e.target.value })} /></div>
+                <div className="space-y-2"><Label>Descrição *</Label><Input value={editFormData.description} onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })} required /></div>
+                <div className="space-y-2"><Label>Nº Série</Label><Input value={editFormData.serialNumber} onChange={(e) => setEditFormData({ ...editFormData, serialNumber: e.target.value })} /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Valor</Label><Input type="number" step="0.01" value={editFormData.amount} onChange={(e) => setEditFormData({ ...editFormData, amount: e.target.value })} /></div>
+                  <div className="space-y-2"><Label>Custo</Label><Input type="number" step="0.01" value={editFormData.cost} onChange={(e) => setEditFormData({ ...editFormData, cost: e.target.value })} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Status</Label>
+                    <Select value={editFormData.serviceType} onValueChange={(v) => setEditFormData({ ...editFormData, serviceType: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="pending">Pendente</SelectItem><SelectItem value="repaired">Reparado</SelectItem><SelectItem value="no_repair">Sem Reparo</SelectItem><SelectItem value="test">Teste</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2"><Label>Conta</Label>
+                    <Select value={editFormData.accountId} onValueChange={(v) => setEditFormData({ ...editFormData, accountId: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>{accounts?.map((acc: any) => (<SelectItem key={acc.id} value={acc.id.toString()}>{acc.name}</SelectItem>))}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2"><Label>Local de Armazenamento</Label><Input value={editFormData.storageLocation} onChange={(e) => setEditFormData({ ...editFormData, storageLocation: e.target.value })} /></div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button>
+                <Button type="submit" disabled={updateMutation.isPending}>Salvar</Button>
               </DialogFooter>
             </form>
           </DialogContent>
