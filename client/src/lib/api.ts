@@ -557,6 +557,21 @@ export const servicesApi = {
     );
     return mapKeys(data);
   },
+  getNextOSNumber: async () => {
+    const userId = await getUserId();
+    const { data } = await supabase
+      .from("services")
+      .select("os_number")
+      .eq("user_id", userId)
+      .not("os_number", "is", null)
+      .order("os_number", { ascending: false })
+      .limit(1);
+    if (data && data.length > 0 && data[0].os_number) {
+      const num = parseInt(data[0].os_number.replace(/\D/g, ""), 10);
+      if (!isNaN(num)) return String(num + 1).padStart(4, "0");
+    }
+    return "0001";
+  },
   create: async (input: any) => {
     const userId = await getUserId();
     const serviceType = input.serviceType || "pending";
