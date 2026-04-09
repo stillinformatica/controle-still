@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { debtorsApi, bankAccountsApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Users2, Trash2, Edit, DollarSign } from "lucide-react";
+import { Plus, Users2, Trash2, Edit, DollarSign, History } from "lucide-react";
 import { toast } from "sonner";
 import { getCurrentDateString } from "@/../../shared/timezone";
 
@@ -22,6 +22,8 @@ export default function Debtors() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [selectedDebtor, setSelectedDebtor] = useState<any>(null);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+  const [historyDebtor, setHistoryDebtor] = useState<any>(null);
   const [paymentData, setPaymentData] = useState({ amount: "", accountId: "", notes: "" });
   const [formData, setFormData] = useState({ name: "", totalAmount: "", paidAmount: "", description: "" });
 
@@ -37,11 +39,23 @@ export default function Debtors() {
   }, [allDebtors, searchQuery]);
   const { data: bankAccounts } = useQuery({ queryKey: ["bankAccounts"], queryFn: () => bankAccountsApi.list(), enabled: !!user });
 
+  const { data: debtorPayments, isLoading: isLoadingPayments } = useQuery({
+    queryKey: ["debtorPayments", historyDebtor?.id],
+    queryFn: () => debtorsApi.listPayments({ debtorId: historyDebtor.id }),
+    enabled: !!historyDebtor?.id,
+  });
+
+  const { data: debtorSales, isLoading: isLoadingSales } = useQuery({
+    queryKey: ["debtorSales", historyDebtor?.name],
+    queryFn: () => debtorsApi.listSalesByCustomer({ customerName: historyDebtor.name }),
+    enabled: !!historyDebtor?.name,
+  });
+
   const inv = () => { queryClient.invalidateQueries({ queryKey: ["debtors"] }); queryClient.invalidateQueries({ queryKey: ["dashboard"] }); queryClient.invalidateQueries({ queryKey: ["bankAccounts"] }); };
   const createMutation = useMutation({ mutationFn: debtorsApi.create, onSuccess: () => { inv(); toast.success("Devedor registrado!"); resetForm(); }, onError: (e: any) => toast.error(e.message) });
   const updateMutation = useMutation({ mutationFn: debtorsApi.update, onSuccess: () => { inv(); toast.success("Devedor atualizado!"); resetForm(); }, onError: (e: any) => toast.error(e.message) });
   const deleteMutation = useMutation({ mutationFn: debtorsApi.delete, onSuccess: () => { inv(); toast.success("Devedor excluído!"); }, onError: (e: any) => toast.error(e.message) });
-  const paymentMutation = useMutation({ mutationFn: debtorsApi.createPayment, onSuccess: () => { inv(); toast.success("Pagamento registrado!"); resetPaymentForm(); }, onError: (e: any) => toast.error(e.message) });
+  const paymentMutation = useMutation({ mutationFn: debtorsApi.createPayment, onSuccess: () => { inv(); queryClient.invalidateQueries({ queryKey: ["debtorPayments"] }); toast.success("Pagamento registrado!"); resetPaymentForm(); }, onError: (e: any) => toast.error(e.message) });
 
   const resetForm = () => { setFormData({ name: "", totalAmount: "", paidAmount: "", description: "" }); setEditingDebtor(null); setIsDialogOpen(false); };
   const resetPaymentForm = () => { setPaymentData({ amount: "", accountId: "", notes: "" }); setSelectedDebtor(null); setIsPaymentDialogOpen(false); };
@@ -55,6 +69,7 @@ export default function Debtors() {
   const handleEdit = (debtor: any) => { setEditingDebtor(debtor); setFormData({ name: debtor.name, totalAmount: debtor.totalAmount, paidAmount: debtor.paidAmount, description: debtor.description || "" }); setIsDialogOpen(true); };
   const handleDelete = (id: number) => { if (confirm("Excluir?")) deleteMutation.mutate({ id }); };
   const handleOpenPayment = (debtor: any) => { setSelectedDebtor(debtor); setIsPaymentDialogOpen(true); };
+  const handleOpenHistory = (debtor: any) => { setHistoryDebtor(debtor); setIsHistoryDialogOpen(true); };
 
   const handlePayment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,9 +81,25 @@ export default function Debtors() {
   };
 
   const formatCurrency = (v: string | number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(typeof v === "string" ? parseFloat(v) : v);
+  const formatDate = (dateString: string) => { const [y, m, d] = dateString.split('-'); return `${d}/${m}/${y}`; };
   const calcRemaining = (t: string, p: string) => parseFloat(t) - parseFloat(p);
   const calcProgress = (t: string, p: string) => (parseFloat(p) / parseFloat(t)) * 100;
   const totalToReceive = debtors?.reduce((s: number, d: any) => s + calcRemaining(d.totalAmount, d.paidAmount), 0) || 0;
+
+  const historyItems = useMemo(() => {
+    const items: Array<{ date: string; type: 'sale' | 'payment'; description: string; amount: number; notes?: string }> = [];
+    if (debtorSales) {
+      for (const sale of debtorSales) {
+        items.push({ date: sale.date, type: 'sale', description: sale.description, amount: parseFloat(sale.amount) });
+      }
+    }
+    if (debtorPayments) {
+      for (const payment of debtorPayments) {
+        items.push({ date: payment.date, type: 'payment', description: payment.notes || 'Pagamento', amount: parseFloat(payment.amount) });
+      }
+    }
+    return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [debtorSales, debtorPayments]);
 
   return (
     <DashboardLayout>
@@ -95,10 +126,11 @@ export default function Debtors() {
               const remaining = calcRemaining(debtor.totalAmount, debtor.paidAmount);
               const progress = calcProgress(debtor.totalAmount, debtor.paidAmount);
               return (
-                <Card key={debtor.id} style={{height: '280px'}}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2" style={{height: '23px'}}>
+                <Card key={debtor.id}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <div className="flex items-center space-x-2"><Users2 className="h-5 w-5 text-primary" /><CardTitle className="text-base font-semibold">{debtor.name}</CardTitle></div>
                     <div className="flex space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenHistory(debtor)} title="Histórico"><History className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(debtor)}><Edit className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(debtor.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
@@ -124,6 +156,7 @@ export default function Debtors() {
           <Card><CardContent className="flex flex-col items-center justify-center py-12"><Users2 className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground text-center">Nenhum devedor cadastrado.</p></CardContent></Card>
         )}
 
+        {/* Dialog Criar/Editar */}
         <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
           <DialogContent>
             <DialogHeader><DialogTitle>{editingDebtor ? "Editar Devedor" : "Novo Devedor"}</DialogTitle><DialogDescription>{editingDebtor ? "Atualize as informações" : "Registre um novo valor a receber"}</DialogDescription></DialogHeader>
@@ -147,6 +180,7 @@ export default function Debtors() {
           </DialogContent>
         </Dialog>
 
+        {/* Dialog Pagamento */}
         <Dialog open={isPaymentDialogOpen} onOpenChange={(open) => { if (!open) resetPaymentForm(); setIsPaymentDialogOpen(open); }}>
           <DialogContent>
             <DialogHeader><DialogTitle>Registrar Pagamento</DialogTitle><DialogDescription>{selectedDebtor && `Pagamento de ${selectedDebtor.name}`}</DialogDescription></DialogHeader>
@@ -173,6 +207,42 @@ export default function Debtors() {
                 <Button type="submit" disabled={paymentMutation.isPending}>Registrar</Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog Histórico */}
+        <Dialog open={isHistoryDialogOpen} onOpenChange={(open) => { if (!open) { setHistoryDebtor(null); } setIsHistoryDialogOpen(open); }}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Histórico - {historyDebtor?.name}</DialogTitle>
+              <DialogDescription>Compras e pagamentos do cliente</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {(isLoadingPayments || isLoadingSales) ? (
+                <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+              ) : historyItems.length > 0 ? (
+                <div className="space-y-2">
+                  {historyItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${item.type === 'sale' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                            {item.type === 'sale' ? 'Compra' : 'Pagamento'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{formatDate(item.date)}</span>
+                        </div>
+                        <p className="text-sm mt-1 truncate">{item.description}</p>
+                      </div>
+                      <span className={`text-sm font-semibold tabular-nums ml-3 ${item.type === 'sale' ? 'text-blue-600' : 'text-green-600'}`}>
+                        {item.type === 'payment' ? '+' : ''}{formatCurrency(item.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">Nenhum registro encontrado.</p>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </div>
