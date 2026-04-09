@@ -536,10 +536,28 @@ export const salesApi = {
     }
 
     // Revert bank account balance
-    if (sale.account_id) {
+    if (sale.account_id && sale.source !== "debtor") {
       const { data: account } = await supabase.from("bank_accounts").select("balance").eq("id", sale.account_id).single();
       if (account) {
         await supabase.from("bank_accounts").update({ balance: account.balance - sale.amount }).eq("id", sale.account_id);
+      }
+    }
+
+    // Revert debtor if source was debtor
+    if (sale.source === "debtor" && sale.customer_name) {
+      const { data: debtors } = await supabase.from("debtors")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("name", sale.customer_name)
+        .eq("total_amount", sale.amount)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (debtors && debtors.length > 0) {
+        const debtor = debtors[0];
+        // Delete any payments associated with this debtor
+        await supabase.from("debtor_payments").delete().eq("debtor_id", debtor.id);
+        // Delete the debtor
+        await supabase.from("debtors").delete().eq("id", debtor.id).eq("user_id", userId);
       }
     }
 
