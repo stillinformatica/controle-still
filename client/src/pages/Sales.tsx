@@ -168,7 +168,29 @@ export default function Sales() {
     setItems([]);
     setNewItem({ productId: "", description: "", quantity: 1, unitPrice: "", unitCost: "", isKit: false });
     setIsDialogOpen(false);
+    setEditingSaleId(null);
     setIsCreatingNewProduct(false);
+  };
+
+  const handleEdit = async (sale: any) => {
+    setEditingSaleId(sale.id);
+    setSaleFormData({
+      date: typeof sale.date === 'string' ? sale.date : sale.date.toISOString().split('T')[0],
+      customerName: sale.customerName || "",
+      accountId: sale.source === "debtor" ? "DEVEDOR" : (sale.accountId?.toString() || ""),
+    });
+    // Load sale items
+    const { data: saleItems } = await supabase.from("sale_items").select("*").eq("sale_id", sale.id);
+    if (saleItems) {
+      setItems(saleItems.map((si: any) => ({
+        productId: si.product_id || undefined,
+        description: si.description,
+        quantity: si.quantity,
+        unitPrice: parseFloat(si.unit_price),
+        unitCost: parseFloat(si.unit_cost),
+      })));
+    }
+    setIsDialogOpen(true);
   };
 
   const handleAddItem = () => {
