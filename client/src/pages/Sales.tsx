@@ -412,9 +412,14 @@ export default function Sales() {
                           <TableCell className="text-right tabular-nums">{formatCurrency(sale.cost)}</TableCell>
                           <TableCell className="text-right tabular-nums font-semibold text-green-600">{formatCurrency(sale.profit)}</TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(sale.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => handleEdit(sale)}>
+                                <Pencil className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(sale.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
