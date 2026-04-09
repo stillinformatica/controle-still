@@ -227,13 +227,13 @@ export default function Services() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div><h1 className="text-3xl font-bold">Serviços</h1><p className="text-muted-foreground mt-2">Registre serviços prestados com OS automática</p></div>
-          <div className="flex gap-2 items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div><h1 className="text-2xl md:text-3xl font-bold">Serviços</h1><p className="text-muted-foreground text-sm mt-1">Registre serviços prestados com OS automática</p></div>
+          <div className="flex gap-2 items-center flex-wrap">
             <Label htmlFor="month-filter" className="text-sm whitespace-nowrap">Período:</Label>
-            <Input id="month-filter" type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-40" disabled={showAllPeriods} />
+            <Input id="month-filter" type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-36" disabled={showAllPeriods} />
             <Button variant={showAllPeriods ? "default" : "outline"} size="sm" onClick={() => setShowAllPeriods(!showAllPeriods)}>{showAllPeriods ? "Filtrar" : "Todos"}</Button>
-            <Button onClick={handleOpenNew}><Plus className="mr-2 h-4 w-4" />Novo Serviço</Button>
+            <Button size="sm" onClick={handleOpenNew}><Plus className="mr-1 h-4 w-4" />Novo Serviço</Button>
           </div>
         </div>
 

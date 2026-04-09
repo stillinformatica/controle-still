@@ -85,13 +85,13 @@ export default function Products() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div><h1 className="text-3xl font-bold">Produtos</h1><p className="text-muted-foreground mt-2">Tabela de preços e margens de lucro</p></div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div><h1 className="text-2xl md:text-3xl font-bold">Produtos</h1><p className="text-muted-foreground text-sm mt-1">Tabela de preços e margens de lucro</p></div>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => setIsSyncDialogOpen(true)}><RefreshCw className="mr-2 h-4 w-4" />Sincronizar com Site</Button>
+            <Button variant="outline" size="sm" onClick={() => setIsSyncDialogOpen(true)}><RefreshCw className="mr-1 h-4 w-4" />Sincronizar</Button>
             <PriceTableExport products={products || []} kits={allKits || []} />
-            <Button onClick={() => setIsDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Novo Produto</Button>
-            <Button variant="outline" onClick={() => setIsKitDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Novo Kit</Button>
+            <Button size="sm" onClick={() => setIsDialogOpen(true)}><Plus className="mr-1 h-4 w-4" />Produto</Button>
+            <Button variant="outline" size="sm" onClick={() => setIsKitDialogOpen(true)}><Plus className="mr-1 h-4 w-4" />Kit</Button>
           </div>
         </div>
 
