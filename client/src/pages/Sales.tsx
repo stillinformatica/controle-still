@@ -30,8 +30,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { salesApi, bankAccountsApi, productsApi, productKitsApi } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, ShoppingCart, Trash2, X } from "lucide-react";
+import { Plus, ShoppingCart, Trash2, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { getCurrentDateString } from "@/../../shared/timezone";
 
@@ -39,6 +40,7 @@ export default function Sales() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -142,9 +144,24 @@ export default function Sales() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["bankAccounts"] });
       toast.success("Venda excluída com sucesso!");
     },
     onError: (error: any) => toast.error("Erro ao excluir venda: " + error.message),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: salesApi.update,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sales"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["bankAccounts"] });
+      toast.success("Venda atualizada com sucesso!");
+      resetForm();
+    },
+    onError: (error: any) => toast.error("Erro ao atualizar venda: " + error.message),
   });
 
   const resetForm = () => {
@@ -152,7 +169,29 @@ export default function Sales() {
     setItems([]);
     setNewItem({ productId: "", description: "", quantity: 1, unitPrice: "", unitCost: "", isKit: false });
     setIsDialogOpen(false);
+    setEditingSaleId(null);
     setIsCreatingNewProduct(false);
+  };
+
+  const handleEdit = async (sale: any) => {
+    setEditingSaleId(sale.id);
+    setSaleFormData({
+      date: typeof sale.date === 'string' ? sale.date : sale.date.toISOString().split('T')[0],
+      customerName: sale.customerName || "",
+      accountId: sale.source === "debtor" ? "DEVEDOR" : (sale.accountId?.toString() || ""),
+    });
+    // Load sale items
+    const { data: saleItems } = await supabase.from("sale_items").select("*").eq("sale_id", sale.id);
+    if (saleItems) {
+      setItems(saleItems.map((si: any) => ({
+        productId: si.product_id || undefined,
+        description: si.description,
+        quantity: si.quantity,
+        unitPrice: parseFloat(si.unit_price),
+        unitCost: parseFloat(si.unit_cost),
+      })));
+    }
+    setIsDialogOpen(true);
   };
 
   const handleAddItem = () => {
@@ -225,14 +264,20 @@ export default function Sales() {
       }
     }
 
-    createMutation.mutate({
+    const payload = {
       date: saleFormData.date,
       description: `Venda ${items.length > 1 ? 'com múltiplos itens' : items[0].description}`,
       source,
       customerName: saleFormData.customerName || undefined,
       accountId,
       items,
-    });
+    };
+
+    if (editingSaleId) {
+      updateMutation.mutate({ ...payload, id: editingSaleId });
+    } else {
+      createMutation.mutate(payload);
+    }
   };
 
   const handleDelete = (id: number) => {
@@ -322,9 +367,14 @@ export default function Sales() {
                             {sale.customerName && <><span>•</span><span className="truncate">{sale.customerName}</span></>}
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(sale.id)} className="shrink-0">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex shrink-0 gap-1">
+                          <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(sale)}>
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(sale.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">{sourceLabels[sale.source] || sale.source}</span>
@@ -362,9 +412,14 @@ export default function Sales() {
                           <TableCell className="text-right tabular-nums">{formatCurrency(sale.cost)}</TableCell>
                           <TableCell className="text-right tabular-nums font-semibold text-green-600">{formatCurrency(sale.profit)}</TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(sale.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => handleEdit(sale)}>
+                                <Pencil className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(sale.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -384,8 +439,8 @@ export default function Sales() {
         <Dialog open={isDialogOpen} onOpenChange={(open) => { if (open) setIsDialogOpen(true); }}>
           <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>Nova Venda</DialogTitle>
-              <DialogDescription>Adicione múltiplos itens à venda</DialogDescription>
+              <DialogTitle>{editingSaleId ? "Editar Venda" : "Nova Venda"}</DialogTitle>
+              <DialogDescription>{editingSaleId ? "Edite os dados da venda" : "Adicione múltiplos itens à venda"}</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
               <div className="space-y-6 py-4 overflow-y-auto flex-1">
@@ -492,7 +547,9 @@ export default function Sales() {
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button>
-                <Button type="submit" disabled={createMutation.isPending || items.length === 0}>Registrar Venda</Button>
+                <Button type="submit" disabled={(createMutation.isPending || updateMutation.isPending) || items.length === 0}>
+                  {editingSaleId ? "Salvar Alterações" : "Registrar Venda"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
