@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useIsMobile } from "@/hooks/useMobile";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -279,19 +280,19 @@ export default function Sales() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold">Vendas</h1>
-            <p className="text-muted-foreground mt-2">Registre e acompanhe suas vendas</p>
+            <h1 className="text-2xl md:text-3xl font-bold">Vendas</h1>
+            <p className="text-muted-foreground text-sm mt-1">Registre e acompanhe suas vendas</p>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center flex-wrap">
             <Label htmlFor="month-filter" className="text-sm whitespace-nowrap">Período:</Label>
-            <Input id="month-filter" type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-40" disabled={showAllPeriods} />
+            <Input id="month-filter" type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-36" disabled={showAllPeriods} />
             <Button variant={showAllPeriods ? "default" : "outline"} size="sm" onClick={() => setShowAllPeriods(!showAllPeriods)}>
               {showAllPeriods ? "Filtrar" : "Todos"}
             </Button>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />Nova Venda
+            <Button size="sm" onClick={() => setIsDialogOpen(true)}>
+              <Plus className="mr-1 h-4 w-4" />Nova Venda
             </Button>
           </div>
         </div>
@@ -308,39 +309,68 @@ export default function Sales() {
             {isLoading ? (
               <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
             ) : sales && sales.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[90px]">Data</TableHead>
-                      <TableHead className="min-w-[120px]">Cliente</TableHead>
-                      <TableHead className="min-w-[150px]">Descrição</TableHead>
-                      <TableHead className="min-w-[90px]">Origem</TableHead>
-                      <TableHead className="text-right min-w-[100px]">Valor</TableHead>
-                      <TableHead className="text-right min-w-[100px]">Custo</TableHead>
-                      <TableHead className="text-right min-w-[100px]">Lucro</TableHead>
-                      <TableHead className="text-right min-w-[60px]">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sales.map((sale: any) => (
-                      <TableRow key={sale.id}>
-                        <TableCell className="whitespace-nowrap">{formatDate(sale.date)}</TableCell>
-                        <TableCell className="max-w-[150px] truncate">{sale.customerName || '-'}</TableCell>
-                        <TableCell className="max-w-[200px] truncate" title={sale.description}>{sale.description}</TableCell>
-                        <TableCell>{sourceLabels[sale.source] || sale.source}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(sale.amount)}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCurrency(sale.cost)}</TableCell>
-                        <TableCell className="text-right tabular-nums font-semibold text-green-600">{formatCurrency(sale.profit)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(sale.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
+              <div>
+                {/* Mobile: card layout */}
+                <div className="md:hidden space-y-3">
+                  {sales.map((sale: any) => (
+                    <div key={sale.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{sale.description}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            <span>{formatDate(sale.date)}</span>
+                            {sale.customerName && <><span>•</span><span className="truncate">{sale.customerName}</span></>}
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(sale.id)} className="shrink-0">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">{sourceLabels[sale.source] || sale.source}</span>
+                        <div className="flex gap-3 tabular-nums">
+                          <span className="text-blue-600 font-semibold">{formatCurrency(sale.amount)}</span>
+                          <span className="text-green-600 font-semibold">{formatCurrency(sale.profit)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop: table layout */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[90px]">Data</TableHead>
+                        <TableHead className="min-w-[120px]">Cliente</TableHead>
+                        <TableHead className="min-w-[150px]">Descrição</TableHead>
+                        <TableHead className="min-w-[90px]">Origem</TableHead>
+                        <TableHead className="text-right min-w-[100px]">Valor</TableHead>
+                        <TableHead className="text-right min-w-[100px]">Custo</TableHead>
+                        <TableHead className="text-right min-w-[100px]">Lucro</TableHead>
+                        <TableHead className="text-right min-w-[60px]">Ações</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {sales.map((sale: any) => (
+                        <TableRow key={sale.id}>
+                          <TableCell className="whitespace-nowrap">{formatDate(sale.date)}</TableCell>
+                          <TableCell className="max-w-[150px] truncate">{sale.customerName || '-'}</TableCell>
+                          <TableCell className="max-w-[200px] truncate" title={sale.description}>{sale.description}</TableCell>
+                          <TableCell>{sourceLabels[sale.source] || sale.source}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatCurrency(sale.amount)}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatCurrency(sale.cost)}</TableCell>
+                          <TableCell className="text-right tabular-nums font-semibold text-green-600">{formatCurrency(sale.profit)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(sale.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12">

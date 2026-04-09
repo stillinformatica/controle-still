@@ -227,13 +227,13 @@ export default function Services() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div><h1 className="text-3xl font-bold">Serviços</h1><p className="text-muted-foreground mt-2">Registre serviços prestados com OS automática</p></div>
-          <div className="flex gap-2 items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div><h1 className="text-2xl md:text-3xl font-bold">Serviços</h1><p className="text-muted-foreground text-sm mt-1">Registre serviços prestados com OS automática</p></div>
+          <div className="flex gap-2 items-center flex-wrap">
             <Label htmlFor="month-filter" className="text-sm whitespace-nowrap">Período:</Label>
-            <Input id="month-filter" type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-40" disabled={showAllPeriods} />
+            <Input id="month-filter" type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-36" disabled={showAllPeriods} />
             <Button variant={showAllPeriods ? "default" : "outline"} size="sm" onClick={() => setShowAllPeriods(!showAllPeriods)}>{showAllPeriods ? "Filtrar" : "Todos"}</Button>
-            <Button onClick={handleOpenNew}><Plus className="mr-2 h-4 w-4" />Novo Serviço</Button>
+            <Button size="sm" onClick={handleOpenNew}><Plus className="mr-1 h-4 w-4" />Novo Serviço</Button>
           </div>
         </div>
 
@@ -278,33 +278,67 @@ export default function Services() {
                       </div>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="ml-4 mt-1 border-l-2 border-muted pl-4">
-                        <Table>
-                          <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>OS</TableHead><TableHead>Descrição</TableHead><TableHead>Nº Série</TableHead><TableHead>Armazenamento</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
-                          <TableBody>
-                            {group.items.map((service: any) => (
-                              <TableRow key={service.id}>
-                                <TableCell className="whitespace-nowrap">{formatDate(service.date)}</TableCell>
-                                <TableCell>{service.osNumber || "-"}</TableCell>
-                                <TableCell className="max-w-[200px] truncate">{service.description}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground">{service.serialNumber || "-"}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground">{service.storageLocation || "-"}</TableCell>
-                                <TableCell>
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${service.serviceType === "repaired" ? "bg-green-100 text-green-800" : service.serviceType === "pending" ? "bg-yellow-100 text-yellow-800" : service.serviceType === "no_repair" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>
-                                    {serviceTypeLabels[service.serviceType || "pending"]}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="text-right tabular-nums">{formatCurrency(service.amount || "0")}</TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex justify-end space-x-1">
-                                    <Button variant="ghost" size="icon" onClick={() => handleEdit(service)}><Edit className="h-4 w-4" /></Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(service.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      <div className="ml-2 md:ml-4 mt-1 border-l-2 border-muted pl-2 md:pl-4">
+                        {/* Mobile: card layout */}
+                        <div className="md:hidden space-y-2">
+                          {group.items.map((service: any) => (
+                            <div key={service.id} className="border rounded-lg p-3 space-y-2">
+                              <div className="flex items-start justify-between">
+                                <div className="space-y-1 flex-1 min-w-0">
+                                  <p className="font-medium text-sm truncate">{service.description}</p>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span>OS: {service.osNumber || "-"}</span>
+                                    <span>•</span>
+                                    <span>{formatDate(service.date)}</span>
                                   </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                                </div>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${service.serviceType === "repaired" ? "bg-green-100 text-green-800" : service.serviceType === "pending" ? "bg-yellow-100 text-yellow-800" : service.serviceType === "no_repair" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>
+                                  {serviceTypeLabels[service.serviceType || "pending"]}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                                {service.serialNumber && <span>Nº Série: {service.serialNumber}</span>}
+                                {service.storageLocation && <span>Local: {service.storageLocation}</span>}
+                              </div>
+                              <div className="flex items-center justify-between pt-1 border-t">
+                                <span className="font-semibold tabular-nums text-blue-600">{formatCurrency(service.amount || "0")}</span>
+                                <div className="flex space-x-1">
+                                  <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(service)}><Edit className="h-4 w-4" /></Button>
+                                  <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(service.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Desktop: table layout */}
+                        <div className="hidden md:block">
+                          <Table>
+                            <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>OS</TableHead><TableHead>Descrição</TableHead><TableHead>Nº Série</TableHead><TableHead>Armazenamento</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                              {group.items.map((service: any) => (
+                                <TableRow key={service.id}>
+                                  <TableCell className="whitespace-nowrap">{formatDate(service.date)}</TableCell>
+                                  <TableCell>{service.osNumber || "-"}</TableCell>
+                                  <TableCell className="max-w-[200px] truncate">{service.description}</TableCell>
+                                  <TableCell className="text-sm text-muted-foreground">{service.serialNumber || "-"}</TableCell>
+                                  <TableCell className="text-sm text-muted-foreground">{service.storageLocation || "-"}</TableCell>
+                                  <TableCell>
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${service.serviceType === "repaired" ? "bg-green-100 text-green-800" : service.serviceType === "pending" ? "bg-yellow-100 text-yellow-800" : service.serviceType === "no_repair" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>
+                                      {serviceTypeLabels[service.serviceType || "pending"]}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-right tabular-nums">{formatCurrency(service.amount || "0")}</TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end space-x-1">
+                                      <Button variant="ghost" size="icon" onClick={() => handleEdit(service)}><Edit className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="icon" onClick={() => handleDelete(service.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
                       </div>
                     </CollapsibleContent>
                   </Collapsible>

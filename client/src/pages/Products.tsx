@@ -85,13 +85,13 @@ export default function Products() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div><h1 className="text-3xl font-bold">Produtos</h1><p className="text-muted-foreground mt-2">Tabela de preços e margens de lucro</p></div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div><h1 className="text-2xl md:text-3xl font-bold">Produtos</h1><p className="text-muted-foreground text-sm mt-1">Tabela de preços e margens de lucro</p></div>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => setIsSyncDialogOpen(true)}><RefreshCw className="mr-2 h-4 w-4" />Sincronizar com Site</Button>
+            <Button variant="outline" size="sm" onClick={() => setIsSyncDialogOpen(true)}><RefreshCw className="mr-1 h-4 w-4" />Sincronizar</Button>
             <PriceTableExport products={products || []} kits={allKits || []} />
-            <Button onClick={() => setIsDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Novo Produto</Button>
-            <Button variant="outline" onClick={() => setIsKitDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Novo Kit</Button>
+            <Button size="sm" onClick={() => setIsDialogOpen(true)}><Plus className="mr-1 h-4 w-4" />Produto</Button>
+            <Button variant="outline" size="sm" onClick={() => setIsKitDialogOpen(true)}><Plus className="mr-1 h-4 w-4" />Kit</Button>
           </div>
         </div>
 
@@ -114,35 +114,70 @@ export default function Products() {
 
           <TabsContent value="products">
             <Card>
-              <CardHeader><CardTitle>Lista de Produtos</CardTitle></CardHeader>
+               <CardHeader><CardTitle>Lista de Produtos</CardTitle></CardHeader>
               <CardContent>
                 {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
                 : regularProducts.length > 0 ? (
-                  <div className="overflow-x-auto w-full">
-                    <Table className="w-full min-w-[700px]">
-                      <TableHeader><TableRow>
-                        <TableHead>Produto</TableHead><TableHead className="text-right">Custo</TableHead><TableHead className="text-right">Preço Venda</TableHead>
-                        <TableHead className="text-right">Qtd</TableHead><TableHead className="text-right">Lucro</TableHead><TableHead className="text-right">Margem</TableHead><TableHead className="text-right">Ações</TableHead>
-                      </TableRow></TableHeader>
-                      <TableBody>
-                        {regularProducts.map((product: any) => {
-                          const profit = calculateProfit(product.cost, product.salePrice);
-                          const margin = calculateMargin(product.cost, product.salePrice);
-                          return (
-                            <TableRow key={product.id}>
-                              <TableCell className="font-medium"><div><span className="block truncate" title={product.name}>{product.name}</span>{product.category && <span className="text-xs text-primary font-medium">{product.category}</span>}{product.description && <p className="text-xs text-muted-foreground truncate">{product.description}</p>}</div></TableCell>
-                              <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.cost)}</TableCell>
-                              <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.salePrice)}</TableCell>
-                              <TableCell className="text-right tabular-nums"><span className={`font-semibold ${product.minimumStock > 0 && product.quantity <= product.minimumStock ? "text-amber-600" : ""}`}>{product.quantity || 0}{product.minimumStock > 0 && product.quantity <= product.minimumStock && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />}</span></TableCell>
-                              <TableCell className="text-right tabular-nums font-semibold text-green-600 text-sm">{formatCurrency(profit)}</TableCell>
-                              <TableCell className="text-right tabular-nums font-semibold text-blue-600 text-sm">{margin.toFixed(1)}%</TableCell>
-                              <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon-sm" onClick={() => setPhotoDialogProduct(product)} title="Fotos"><Camera className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => setAnnouncingProduct(product)} title="Anunciar"><Megaphone className="h-4 w-4 text-primary" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
+                  <>
+                    {/* Mobile: card layout */}
+                    <div className="md:hidden space-y-3">
+                      {regularProducts.map((product: any) => {
+                        const profit = calculateProfit(product.cost, product.salePrice);
+                        const margin = calculateMargin(product.cost, product.salePrice);
+                        return (
+                          <div key={product.id} className="border rounded-lg p-3 space-y-2">
+                            <div className="flex items-start justify-between">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm truncate">{product.name}</p>
+                                {product.category && <span className="text-xs text-primary font-medium">{product.category}</span>}
+                                {product.description && <p className="text-xs text-muted-foreground truncate">{product.description}</p>}
+                              </div>
+                              <div className="flex shrink-0 space-x-0.5">
+                                <Button variant="ghost" size="icon-sm" onClick={() => setPhotoDialogProduct(product)}><Camera className="h-3.5 w-3.5" /></Button>
+                                <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}><Edit className="h-3.5 w-3.5" /></Button>
+                                <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(product.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 text-xs tabular-nums">
+                              <div><span className="text-muted-foreground">Custo</span><p className="font-medium">{formatCurrency(product.cost)}</p></div>
+                              <div><span className="text-muted-foreground">Venda</span><p className="font-medium">{formatCurrency(product.salePrice)}</p></div>
+                              <div><span className="text-muted-foreground">Estoque</span><p className={`font-semibold ${product.minimumStock > 0 && product.quantity <= product.minimumStock ? "text-amber-600" : ""}`}>{product.quantity || 0}{product.minimumStock > 0 && product.quantity <= product.minimumStock && <AlertTriangle className="inline h-3 w-3 ml-0.5 text-amber-500" />}</p></div>
+                            </div>
+                            <div className="flex items-center justify-between text-xs border-t pt-1.5">
+                              <span className="text-green-600 font-semibold tabular-nums">Lucro: {formatCurrency(profit)}</span>
+                              <span className="text-blue-600 font-semibold tabular-nums">Margem: {margin.toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Desktop: table layout */}
+                    <div className="hidden md:block overflow-x-auto w-full">
+                      <Table className="w-full min-w-[700px]">
+                        <TableHeader><TableRow>
+                          <TableHead>Produto</TableHead><TableHead className="text-right">Custo</TableHead><TableHead className="text-right">Preço Venda</TableHead>
+                          <TableHead className="text-right">Qtd</TableHead><TableHead className="text-right">Lucro</TableHead><TableHead className="text-right">Margem</TableHead><TableHead className="text-right">Ações</TableHead>
+                        </TableRow></TableHeader>
+                        <TableBody>
+                          {regularProducts.map((product: any) => {
+                            const profit = calculateProfit(product.cost, product.salePrice);
+                            const margin = calculateMargin(product.cost, product.salePrice);
+                            return (
+                              <TableRow key={product.id}>
+                                <TableCell className="font-medium"><div><span className="block truncate" title={product.name}>{product.name}</span>{product.category && <span className="text-xs text-primary font-medium">{product.category}</span>}{product.description && <p className="text-xs text-muted-foreground truncate">{product.description}</p>}</div></TableCell>
+                                <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.cost)}</TableCell>
+                                <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.salePrice)}</TableCell>
+                                <TableCell className="text-right tabular-nums"><span className={`font-semibold ${product.minimumStock > 0 && product.quantity <= product.minimumStock ? "text-amber-600" : ""}`}>{product.quantity || 0}{product.minimumStock > 0 && product.quantity <= product.minimumStock && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />}</span></TableCell>
+                                <TableCell className="text-right tabular-nums font-semibold text-green-600 text-sm">{formatCurrency(profit)}</TableCell>
+                                <TableCell className="text-right tabular-nums font-semibold text-blue-600 text-sm">{margin.toFixed(1)}%</TableCell>
+                                <TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon-sm" onClick={() => setPhotoDialogProduct(product)} title="Fotos"><Camera className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => setAnnouncingProduct(product)} title="Anunciar"><Megaphone className="h-4 w-4 text-primary" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleEdit(product)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon-sm" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12"><Package className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground text-center">Nenhum produto cadastrado.</p></div>
                 )}
