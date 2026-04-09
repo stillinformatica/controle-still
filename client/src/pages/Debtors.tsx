@@ -156,7 +156,7 @@ export default function Debtors() {
                     <div className="flex space-x-1">
                       <Button variant="ghost" size="icon" onClick={() => handleOpenHistory(debtor)} title="Histórico"><History className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(debtor)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(debtor.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(debtor)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
