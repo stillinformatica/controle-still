@@ -264,14 +264,20 @@ export default function Sales() {
       }
     }
 
-    createMutation.mutate({
+    const payload = {
       date: saleFormData.date,
       description: `Venda ${items.length > 1 ? 'com múltiplos itens' : items[0].description}`,
       source,
       customerName: saleFormData.customerName || undefined,
       accountId,
       items,
-    });
+    };
+
+    if (editingSaleId) {
+      updateMutation.mutate({ ...payload, id: editingSaleId });
+    } else {
+      createMutation.mutate(payload);
+    }
   };
 
   const handleDelete = (id: number) => {
