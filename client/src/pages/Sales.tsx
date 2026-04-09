@@ -547,7 +547,9 @@ export default function Sales() {
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button>
-                <Button type="submit" disabled={createMutation.isPending || items.length === 0}>Registrar Venda</Button>
+                <Button type="submit" disabled={(createMutation.isPending || updateMutation.isPending) || items.length === 0}>
+                  {editingSaleId ? "Salvar Alterações" : "Registrar Venda"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
