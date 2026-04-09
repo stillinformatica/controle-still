@@ -890,7 +890,27 @@ export const debtorsApi = {
       if (account) {
         await supabase.from("bank_accounts").update({ balance: account.balance + amount }).eq("id", input.accountId);
       }
+      // Create transaction record for debtor payment
+      await supabase.from("transactions").insert({
+        user_id: userId, account_id: input.accountId, date: input.date,
+        description: `Pagamento devedor: ${debtor?.name || ''}`, amount,
+        type: "income" as any, category: "debtor_payment", is_personal: false,
+      });
     }
+  },
+  listPayments: async (input: { debtorId: number }) => {
+    const userId = await getUserId();
+    const data = throwIfError(
+      await supabase.from("debtor_payments").select("*").eq("user_id", userId).eq("debtor_id", input.debtorId).order("date", { ascending: false })
+    );
+    return mapKeys(data);
+  },
+  listSalesByCustomer: async (input: { customerName: string }) => {
+    const userId = await getUserId();
+    const data = throwIfError(
+      await supabase.from("sales").select("*").eq("user_id", userId).eq("customer_name", input.customerName).order("date", { ascending: false })
+    );
+    return mapKeys(data);
   },
 };
 
