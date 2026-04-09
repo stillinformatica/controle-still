@@ -143,9 +143,24 @@ export default function Sales() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["bankAccounts"] });
       toast.success("Venda excluída com sucesso!");
     },
     onError: (error: any) => toast.error("Erro ao excluir venda: " + error.message),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: salesApi.update,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sales"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["bankAccounts"] });
+      toast.success("Venda atualizada com sucesso!");
+      resetForm();
+    },
+    onError: (error: any) => toast.error("Erro ao atualizar venda: " + error.message),
   });
 
   const resetForm = () => {
