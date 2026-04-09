@@ -559,14 +559,18 @@ export const servicesApi = {
   },
   create: async (input: any) => {
     const userId = await getUserId();
+    const serviceType = input.serviceType || "pending";
+    const isCompleted = serviceType === "no_repair" || serviceType === "repaired" || serviceType === "test";
+    const amount = input.amount ? parseFloat(input.amount) : 0;
+    const cost = input.cost ? parseFloat(input.cost) : 0;
     const data = throwIfError(
       await supabase.from("services").insert({
         user_id: userId, date: input.date, description: input.description,
-        service_type: input.serviceType || "pending",
-        status: input.serviceType === "no_repair" ? "completed" : "open",
+        service_type: serviceType,
+        status: isCompleted ? "completed" : "open",
         amount: input.amount ? parseFloat(input.amount) : null,
-        cost: input.cost ? parseFloat(input.cost) : 0,
-        profit: input.amount ? parseFloat(input.amount) - (input.cost ? parseFloat(input.cost) : 0) : 0,
+        cost: cost,
+        profit: amount - cost,
         customer_name: input.customerName || null,
         os_number: input.osNumber || null,
         serial_number: input.serialNumber || null,
@@ -574,16 +578,29 @@ export const servicesApi = {
         storage_location: input.storageLocation || null,
       }).select().single()
     );
+    // Auto-create debtor for repaired/test services with amount
+    if ((serviceType === "repaired" || serviceType === "test") && amount > 0 && input.customerName) {
+      await supabase.from("debtors").insert({
+        user_id: userId,
+        name: input.customerName,
+        total_amount: amount,
+        remaining_amount: amount,
+        description: `Serviço OS ${input.osNumber || "S/N"} - ${input.description}`,
+      });
+    }
     return mapKeys(data);
   },
   update: async (input: any) => {
     const userId = await getUserId();
+    // Fetch current service to detect status change
+    const { data: currentService } = await supabase.from("services").select("*").eq("id", input.id).eq("user_id", userId).single();
     const updates: any = { updated_at: new Date().toISOString() };
     if (input.date !== undefined) updates.date = input.date;
     if (input.description !== undefined) updates.description = input.description;
     if (input.serviceType !== undefined) {
       updates.service_type = input.serviceType;
-      updates.status = input.serviceType === "no_repair" ? "completed" : "open";
+      const isCompleted = input.serviceType === "no_repair" || input.serviceType === "repaired" || input.serviceType === "test";
+      updates.status = isCompleted ? "completed" : "open";
     }
     if (input.amount !== undefined) updates.amount = input.amount ? parseFloat(input.amount) : null;
     if (input.cost !== undefined) updates.cost = input.cost ? parseFloat(input.cost) : 0;
@@ -600,6 +617,25 @@ export const servicesApi = {
     const data = throwIfError(
       await supabase.from("services").update(updates).eq("id", input.id).eq("user_id", userId).select().single()
     );
+    // Auto-create debtor if status changed to completed (repaired/test) and wasn't completed before
+    const newType = input.serviceType || currentService?.service_type;
+    const wasCompleted = currentService?.status === "completed";
+    const isNowCompleted = (newType === "repaired" || newType === "test") && updates.status === "completed";
+    if (isNowCompleted && !wasCompleted) {
+      const amount = updates.amount ?? currentService?.amount ?? 0;
+      const customerName = updates.customer_name ?? currentService?.customer_name;
+      const osNumber = updates.os_number ?? currentService?.os_number;
+      const description = updates.description ?? currentService?.description;
+      if (amount > 0 && customerName) {
+        await supabase.from("debtors").insert({
+          user_id: userId,
+          name: customerName,
+          total_amount: amount,
+          remaining_amount: amount,
+          description: `Serviço OS ${osNumber || "S/N"} - ${description}`,
+        });
+      }
+    }
     return mapKeys(data);
   },
   delete: async (input: { id: number }) => {
