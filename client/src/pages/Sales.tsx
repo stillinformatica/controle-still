@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table";
 import { salesApi, bankAccountsApi, productsApi, productKitsApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, ShoppingCart, Trash2, X } from "lucide-react";
+import { Plus, ShoppingCart, Trash2, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { getCurrentDateString } from "@/../../shared/timezone";
 
