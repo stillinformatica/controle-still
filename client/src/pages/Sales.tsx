@@ -367,9 +367,14 @@ export default function Sales() {
                             {sale.customerName && <><span>•</span><span className="truncate">{sale.customerName}</span></>}
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(sale.id)} className="shrink-0">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex shrink-0 gap-1">
+                          <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(sale)}>
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(sale.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">{sourceLabels[sale.source] || sale.source}</span>
