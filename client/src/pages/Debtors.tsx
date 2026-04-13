@@ -47,7 +47,7 @@ export default function Debtors() {
         grouped.set(key, { ...d, _ids: [d.id] });
       }
     }
-    let filtered = Array.from(grouped.values());
+    let filtered = Array.from(grouped.values()).filter((d: any) => parseFloat(d.remainingAmount) > 0);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter((d: any) => d.name.toLowerCase().includes(q));
