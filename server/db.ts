@@ -429,13 +429,90 @@ export async function updateSale(id: number, userId: number, data: Partial<Inser
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Recalcular lucro se necessário
+  // Buscar venda atual antes de atualizar
+  const currentSale = await db.select().from(sales).where(and(eq(sales.id, id), eq(sales.userId, userId))).limit(1);
+  if (!currentSale[0]) throw new Error("Venda não encontrada");
+  
+  const oldSale = currentSale[0];
+  const oldAmount = parseFloat(oldSale.amount.toString());
+  const newAmount = data.amount ? parseFloat(data.amount.toString()) : oldAmount;
+  const newCost = data.cost ? parseFloat(data.cost.toString()) : parseFloat(oldSale.cost.toString());
+  const amountDiff = newAmount - oldAmount;
+  
+  // Recalcular lucro
   if (data.amount || data.cost) {
-    const currentSale = await db.select().from(sales).where(and(eq(sales.id, id), eq(sales.userId, userId))).limit(1);
-    if (currentSale[0]) {
-      const amount = data.amount ? parseFloat(data.amount.toString()) : parseFloat(currentSale[0].amount.toString());
-      const cost = data.cost ? parseFloat(data.cost.toString()) : parseFloat(currentSale[0].cost.toString());
-      data.profit = (amount - cost).toString();
+    data.profit = (newAmount - newCost).toString();
+  }
+  
+  // Ajustar conta bancária se valor ou conta mudou (vendas não-devedor)
+  const oldAccountId = oldSale.accountId;
+  const newAccountId = data.accountId !== undefined ? data.accountId : oldAccountId;
+  const oldSource = oldSale.source;
+  const newSource = data.source || oldSource;
+  
+  const oldDescription = `Venda: ${oldSale.customerName || 'Cliente'} - ${oldSale.description}`;
+  
+  // Reverter saldo antigo se tinha conta e não era devedor
+  if (oldAccountId && oldSource !== "debtor") {
+    const oldAccount = await db.select().from(bankAccounts).where(
+      and(eq(bankAccounts.id, oldAccountId), eq(bankAccounts.userId, userId))
+    ).limit(1);
+    if (oldAccount[0]) {
+      const newBalance = (parseFloat(oldAccount[0].balance) - oldAmount).toFixed(2);
+      await db.update(bankAccounts).set({ balance: newBalance }).where(eq(bankAccounts.id, oldAccountId));
+    }
+    // Remover transação antiga
+    await db.delete(transactions).where(
+      and(eq(transactions.userId, userId), eq(transactions.accountId, oldAccountId), eq(transactions.description, oldDescription), eq(transactions.type, "income"))
+    );
+  }
+  
+  // Aplicar novo saldo se tem conta e não é devedor
+  if (newAccountId && newSource !== "debtor") {
+    const newAccount = await db.select().from(bankAccounts).where(
+      and(eq(bankAccounts.id, newAccountId), eq(bankAccounts.userId, userId))
+    ).limit(1);
+    if (newAccount[0]) {
+      const updatedBalance = (parseFloat(newAccount[0].balance) + newAmount).toFixed(2);
+      await db.update(bankAccounts).set({ balance: updatedBalance }).where(eq(bankAccounts.id, newAccountId));
+    }
+    // Criar nova transação
+    const newDesc = `Venda: ${data.customerName || oldSale.customerName || 'Cliente'} - ${data.description || oldSale.description}`;
+    await db.insert(transactions).values({
+      userId, accountId: newAccountId, type: "income", category: "Venda",
+      amount: newAmount.toString(), description: newDesc, date: data.date || oldSale.date
+    });
+  }
+  
+  // Ajustar devedor se era/é venda de devedor
+  if (oldSource === "debtor" && oldSale.customerName) {
+    // Reverter valor antigo do devedor
+    const oldDebtor = await db.select().from(debtors).where(
+      and(eq(debtors.userId, userId), eq(debtors.name, oldSale.customerName))
+    ).limit(1);
+    if (oldDebtor[0]) {
+      const newTotal = (parseFloat(oldDebtor[0].totalAmount) - oldAmount).toFixed(2);
+      const newRemaining = (parseFloat(oldDebtor[0].remainingAmount) - oldAmount).toFixed(2);
+      if (parseFloat(newTotal) <= 0) {
+        await db.delete(debtors).where(eq(debtors.id, oldDebtor[0].id));
+      } else {
+        await db.update(debtors).set({ totalAmount: newTotal, remainingAmount: newRemaining, status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" }).where(eq(debtors.id, oldDebtor[0].id));
+      }
+    }
+  }
+  if (newSource === "debtor") {
+    const custName = data.customerName || oldSale.customerName;
+    if (custName && newAmount > 0) {
+      const existingDebtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, userId), eq(debtors.name, custName))
+      ).limit(1);
+      if (existingDebtor[0]) {
+        const newTotal = (parseFloat(existingDebtor[0].totalAmount) + newAmount).toFixed(2);
+        const newRemaining = (parseFloat(existingDebtor[0].remainingAmount) + newAmount).toFixed(2);
+        await db.update(debtors).set({ totalAmount: newTotal, remainingAmount: newRemaining, status: "pending" }).where(eq(debtors.id, existingDebtor[0].id));
+      } else {
+        await db.insert(debtors).values({ userId, name: custName, totalAmount: newAmount.toFixed(2), paidAmount: "0", remainingAmount: newAmount.toFixed(2), status: "pending", description: data.description || oldSale.description });
+      }
     }
   }
   
@@ -604,33 +681,54 @@ export async function updateService(id: number, userId: number, data: Partial<In
   const currentService = await db.select().from(services).where(and(eq(services.id, id), eq(services.userId, userId))).limit(1);
   if (!currentService[0]) throw new Error("Service not found");
   
+  const oldService = currentService[0];
+  const oldAmount = parseFloat((oldService.amount || "0").toString());
+  const newAmount = data.amount ? parseFloat(data.amount.toString()) : oldAmount;
+  
   if (data.amount || data.cost) {
-    const amount = data.amount ? parseFloat(data.amount.toString()) : parseFloat((currentService[0].amount || "0").toString());
-    const cost = data.cost ? parseFloat(data.cost.toString()) : parseFloat((currentService[0].cost || "0").toString());
-    data.profit = (amount - cost).toString();
+    const cost = data.cost ? parseFloat(data.cost.toString()) : parseFloat((oldService.cost || "0").toString());
+    data.profit = (newAmount - cost).toString();
+  }
+  
+  // Se o serviço JÁ estava concluído e tinha devedor, reverter valor antigo do devedor
+  const wasCompleted = oldService.status === "completed";
+  const oldCustomerName = oldService.customerName;
+  const oldServiceType = oldService.serviceType;
+  const hadDebtor = wasCompleted && oldCustomerName && oldServiceType !== "no_repair" && oldAmount > 0;
+  
+  if (hadDebtor) {
+    const oldDebtor = await db.select().from(debtors).where(
+      and(eq(debtors.userId, userId), eq(debtors.name, oldCustomerName!))
+    ).limit(1);
+    if (oldDebtor[0]) {
+      const newTotal = (parseFloat(oldDebtor[0].totalAmount) - oldAmount).toFixed(2);
+      const newRemaining = (parseFloat(oldDebtor[0].remainingAmount) - oldAmount).toFixed(2);
+      if (parseFloat(newTotal) <= 0) {
+        await db.delete(debtors).where(eq(debtors.id, oldDebtor[0].id));
+      } else {
+        await db.update(debtors).set({ totalAmount: newTotal, remainingAmount: newRemaining, status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" }).where(eq(debtors.id, oldDebtor[0].id));
+      }
+    }
   }
   
   // Se tipo mudou para "repaired", "test" ou "no_repair", marcar como concluído automaticamente
-  if (data.serviceType && (data.serviceType === "repaired" || data.serviceType === "test" || data.serviceType === "no_repair")) {
-    data.status = "completed";
+  const newServiceType = data.serviceType || oldServiceType;
+  const willComplete = (data.serviceType && (data.serviceType === "repaired" || data.serviceType === "test" || data.serviceType === "no_repair")) || wasCompleted;
+  
+  if (willComplete) {
+    if (data.serviceType) data.status = "completed";
     
-    // "Sem Conserto" não gera débito para o cliente
-    const shouldCreateDebtor = data.serviceType !== "no_repair";
+    const shouldCreateDebtor = newServiceType !== "no_repair";
+    const customerName = data.customerName || oldCustomerName;
     
-    // Criar/atualizar devedor com o valor do serviço (apenas para consertado/entregue)
-    const amount = data.amount ? parseFloat(data.amount.toString()) : parseFloat((currentService[0].amount || "0").toString());
-    const customerName = data.customerName || currentService[0].customerName;
-    
-    if (shouldCreateDebtor && amount > 0 && customerName) {
-      // Verificar se já existe devedor com esse nome
+    if (shouldCreateDebtor && newAmount > 0 && customerName) {
       const existingDebtor = await db.select().from(debtors).where(
         and(eq(debtors.userId, userId), eq(debtors.name, customerName))
       ).limit(1);
       
       if (existingDebtor[0]) {
-        // Atualizar devedor existente
         const currentTotal = parseFloat(existingDebtor[0].totalAmount);
-        const newTotal = currentTotal + amount;
+        const newTotal = currentTotal + newAmount;
         const currentPaid = parseFloat(existingDebtor[0].paidAmount || "0");
         const newRemaining = newTotal - currentPaid;
         
@@ -643,13 +741,12 @@ export async function updateService(id: number, userId: number, data: Partial<In
           })
           .where(eq(debtors.id, existingDebtor[0].id));
       } else {
-        // Criar novo devedor
         await db.insert(debtors).values({
           userId,
           name: customerName,
-          totalAmount: amount.toFixed(2),
+          totalAmount: newAmount.toFixed(2),
           paidAmount: "0",
-          remainingAmount: amount.toFixed(2),
+          remainingAmount: newAmount.toFixed(2),
           status: "pending",
         });
       }
@@ -662,6 +759,46 @@ export async function updateService(id: number, userId: number, data: Partial<In
 export async function deleteService(id: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  
+  // Buscar serviço antes de deletar
+  const service = await db.select().from(services).where(and(eq(services.id, id), eq(services.userId, userId))).limit(1);
+  if (!service[0]) throw new Error("Serviço não encontrado");
+  
+  const svc = service[0];
+  
+  // Se serviço estava concluído e tinha cliente, reverter devedor
+  if (svc.status === "completed" && svc.customerName && svc.serviceType !== "no_repair") {
+    const amount = parseFloat((svc.amount || "0").toString());
+    if (amount > 0) {
+      const debtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, userId), eq(debtors.name, svc.customerName))
+      ).limit(1);
+      if (debtor[0]) {
+        const newTotal = (parseFloat(debtor[0].totalAmount) - amount).toFixed(2);
+        const newRemaining = (parseFloat(debtor[0].remainingAmount) - amount).toFixed(2);
+        if (parseFloat(newTotal) <= 0) {
+          await db.delete(debtors).where(eq(debtors.id, debtor[0].id));
+        } else {
+          await db.update(debtors).set({ totalAmount: newTotal, remainingAmount: newRemaining, status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" }).where(eq(debtors.id, debtor[0].id));
+        }
+      }
+    }
+  }
+  
+  // Se serviço tinha conta bancária e estava concluído, reverter saldo
+  if (svc.accountId && svc.status === "completed") {
+    const amount = parseFloat((svc.amount || "0").toString());
+    if (amount > 0) {
+      const account = await db.select().from(bankAccounts).where(
+        and(eq(bankAccounts.id, svc.accountId), eq(bankAccounts.userId, userId))
+      ).limit(1);
+      if (account[0]) {
+        const newBalance = (parseFloat(account[0].balance) - amount).toFixed(2);
+        await db.update(bankAccounts).set({ balance: newBalance }).where(eq(bankAccounts.id, svc.accountId));
+      }
+    }
+  }
+  
   return db.delete(services).where(and(eq(services.id, id), eq(services.userId, userId)));
 }
 
