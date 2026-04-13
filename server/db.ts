@@ -739,6 +739,46 @@ export async function updateService(id: number, userId: number, data: Partial<In
 export async function deleteService(id: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  
+  // Buscar serviço antes de deletar
+  const service = await db.select().from(services).where(and(eq(services.id, id), eq(services.userId, userId))).limit(1);
+  if (!service[0]) throw new Error("Serviço não encontrado");
+  
+  const svc = service[0];
+  
+  // Se serviço estava concluído e tinha cliente, reverter devedor
+  if (svc.status === "completed" && svc.customerName && svc.serviceType !== "no_repair") {
+    const amount = parseFloat((svc.amount || "0").toString());
+    if (amount > 0) {
+      const debtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, userId), eq(debtors.name, svc.customerName))
+      ).limit(1);
+      if (debtor[0]) {
+        const newTotal = (parseFloat(debtor[0].totalAmount) - amount).toFixed(2);
+        const newRemaining = (parseFloat(debtor[0].remainingAmount) - amount).toFixed(2);
+        if (parseFloat(newTotal) <= 0) {
+          await db.delete(debtors).where(eq(debtors.id, debtor[0].id));
+        } else {
+          await db.update(debtors).set({ totalAmount: newTotal, remainingAmount: newRemaining, status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" }).where(eq(debtors.id, debtor[0].id));
+        }
+      }
+    }
+  }
+  
+  // Se serviço tinha conta bancária e estava concluído, reverter saldo
+  if (svc.accountId && svc.status === "completed") {
+    const amount = parseFloat((svc.amount || "0").toString());
+    if (amount > 0) {
+      const account = await db.select().from(bankAccounts).where(
+        and(eq(bankAccounts.id, svc.accountId), eq(bankAccounts.userId, userId))
+      ).limit(1);
+      if (account[0]) {
+        const newBalance = (parseFloat(account[0].balance) - amount).toFixed(2);
+        await db.update(bankAccounts).set({ balance: newBalance }).where(eq(bankAccounts.id, svc.accountId));
+      }
+    }
+  }
+  
   return db.delete(services).where(and(eq(services.id, id), eq(services.userId, userId)));
 }
 
