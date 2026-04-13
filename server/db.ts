@@ -1280,10 +1280,72 @@ export async function updateServiceOrder(id: number, userId: number, data: Parti
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
+  // Buscar OS atual para verificar se estava concluída
+  const current = await db.select().from(serviceOrders).where(
+    and(eq(serviceOrders.id, id), eq(serviceOrders.userId, userId))
+  ).limit(1);
+  
+  if (current[0] && current[0].status === "completed" && current[0].customerName) {
+    const oldAmount = parseFloat(current[0].totalAmount);
+    if (oldAmount > 0) {
+      // Reverter valor antigo do devedor
+      const oldDebtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, userId), eq(debtors.name, current[0].customerName))
+      ).limit(1);
+      if (oldDebtor[0]) {
+        const newTotal = (parseFloat(oldDebtor[0].totalAmount) - oldAmount).toFixed(2);
+        const newRemaining = (parseFloat(oldDebtor[0].remainingAmount) - oldAmount).toFixed(2);
+        if (parseFloat(newTotal) <= 0) {
+          await db.delete(debtors).where(eq(debtors.id, oldDebtor[0].id));
+        } else {
+          await db.update(debtors).set({ 
+            totalAmount: newTotal, 
+            remainingAmount: newRemaining, 
+            status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" 
+          }).where(eq(debtors.id, oldDebtor[0].id));
+        }
+      }
+    }
+  }
+  
   await db
     .update(serviceOrders)
     .set({ ...data, updatedAt: new Date() })
     .where(and(eq(serviceOrders.id, id), eq(serviceOrders.userId, userId)));
+  
+  // Se a OS continua concluída, re-adicionar o valor atualizado ao devedor
+  const updated = await db.select().from(serviceOrders).where(
+    and(eq(serviceOrders.id, id), eq(serviceOrders.userId, userId))
+  ).limit(1);
+  
+  if (updated[0] && updated[0].status === "completed" && updated[0].customerName) {
+    const newAmount = parseFloat(updated[0].totalAmount);
+    if (newAmount > 0) {
+      const existingDebtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, userId), eq(debtors.name, updated[0].customerName))
+      ).limit(1);
+      
+      if (existingDebtor[0]) {
+        const newTotal = (parseFloat(existingDebtor[0].totalAmount) + newAmount).toFixed(2);
+        const newRemaining = (parseFloat(existingDebtor[0].remainingAmount) + newAmount).toFixed(2);
+        await db.update(debtors).set({ 
+          totalAmount: newTotal, 
+          remainingAmount: newRemaining, 
+          status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" 
+        }).where(eq(debtors.id, existingDebtor[0].id));
+      } else {
+        await db.insert(debtors).values({
+          userId,
+          name: updated[0].customerName,
+          totalAmount: newAmount.toFixed(2),
+          paidAmount: "0",
+          remainingAmount: newAmount.toFixed(2),
+          status: "pending",
+          description: `OS ${updated[0].osNumber}`
+        });
+      }
+    }
+  }
   
   return { success: true };
 }
