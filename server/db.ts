@@ -1280,10 +1280,72 @@ export async function updateServiceOrder(id: number, userId: number, data: Parti
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
+  // Buscar OS atual para verificar se estava concluída
+  const current = await db.select().from(serviceOrders).where(
+    and(eq(serviceOrders.id, id), eq(serviceOrders.userId, userId))
+  ).limit(1);
+  
+  if (current[0] && current[0].status === "completed" && current[0].customerName) {
+    const oldAmount = parseFloat(current[0].totalAmount);
+    if (oldAmount > 0) {
+      // Reverter valor antigo do devedor
+      const oldDebtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, userId), eq(debtors.name, current[0].customerName))
+      ).limit(1);
+      if (oldDebtor[0]) {
+        const newTotal = (parseFloat(oldDebtor[0].totalAmount) - oldAmount).toFixed(2);
+        const newRemaining = (parseFloat(oldDebtor[0].remainingAmount) - oldAmount).toFixed(2);
+        if (parseFloat(newTotal) <= 0) {
+          await db.delete(debtors).where(eq(debtors.id, oldDebtor[0].id));
+        } else {
+          await db.update(debtors).set({ 
+            totalAmount: newTotal, 
+            remainingAmount: newRemaining, 
+            status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" 
+          }).where(eq(debtors.id, oldDebtor[0].id));
+        }
+      }
+    }
+  }
+  
   await db
     .update(serviceOrders)
     .set({ ...data, updatedAt: new Date() })
     .where(and(eq(serviceOrders.id, id), eq(serviceOrders.userId, userId)));
+  
+  // Se a OS continua concluída, re-adicionar o valor atualizado ao devedor
+  const updated = await db.select().from(serviceOrders).where(
+    and(eq(serviceOrders.id, id), eq(serviceOrders.userId, userId))
+  ).limit(1);
+  
+  if (updated[0] && updated[0].status === "completed" && updated[0].customerName) {
+    const newAmount = parseFloat(updated[0].totalAmount);
+    if (newAmount > 0) {
+      const existingDebtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, userId), eq(debtors.name, updated[0].customerName))
+      ).limit(1);
+      
+      if (existingDebtor[0]) {
+        const newTotal = (parseFloat(existingDebtor[0].totalAmount) + newAmount).toFixed(2);
+        const newRemaining = (parseFloat(existingDebtor[0].remainingAmount) + newAmount).toFixed(2);
+        await db.update(debtors).set({ 
+          totalAmount: newTotal, 
+          remainingAmount: newRemaining, 
+          status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" 
+        }).where(eq(debtors.id, existingDebtor[0].id));
+      } else {
+        await db.insert(debtors).values({
+          userId,
+          name: updated[0].customerName,
+          totalAmount: newAmount.toFixed(2),
+          paidAmount: "0",
+          remainingAmount: newAmount.toFixed(2),
+          status: "pending",
+          description: `OS ${updated[0].osNumber}`
+        });
+      }
+    }
+  }
   
   return { success: true };
 }
@@ -1354,6 +1416,38 @@ export async function deleteServiceOrder(id: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
+  // Buscar OS antes de deletar
+  const order = await db.select().from(serviceOrders).where(
+    and(eq(serviceOrders.id, id), eq(serviceOrders.userId, userId))
+  ).limit(1);
+  
+  if (!order[0]) throw new Error("OS não encontrada");
+  
+  const os = order[0];
+  
+  // Se OS estava concluída e tinha cliente, reverter devedor
+  if (os.status === "completed" && os.customerName) {
+    const totalAmount = parseFloat(os.totalAmount);
+    if (totalAmount > 0) {
+      const debtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, userId), eq(debtors.name, os.customerName))
+      ).limit(1);
+      if (debtor[0]) {
+        const newTotal = (parseFloat(debtor[0].totalAmount) - totalAmount).toFixed(2);
+        const newRemaining = (parseFloat(debtor[0].remainingAmount) - totalAmount).toFixed(2);
+        if (parseFloat(newTotal) <= 0) {
+          await db.delete(debtors).where(eq(debtors.id, debtor[0].id));
+        } else {
+          await db.update(debtors).set({ 
+            totalAmount: newTotal, 
+            remainingAmount: newRemaining, 
+            status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" 
+          }).where(eq(debtors.id, debtor[0].id));
+        }
+      }
+    }
+  }
+  
   // Deletar itens primeiro
   await db.delete(serviceOrderItems).where(eq(serviceOrderItems.serviceOrderId, id));
   
@@ -1405,6 +1499,11 @@ export async function updateServiceOrderItem(id: number, data: Partial<InsertSer
   const item = await db.select().from(serviceOrderItems).where(eq(serviceOrderItems.id, id)).limit(1);
   if (!item[0]) throw new Error("Item not found");
   
+  // Buscar OS para checar se está concluída
+  const os = await db.select().from(serviceOrders).where(eq(serviceOrders.id, item[0].serviceOrderId)).limit(1);
+  const wasCompleted = os[0]?.status === "completed";
+  const oldOsTotal = wasCompleted ? parseFloat(os[0].totalAmount) : 0;
+  
   // Recalcular lucro se amount ou cost mudaram
   if (data.amount || data.cost) {
     const currentAmount = data.amount ? parseFloat(data.amount.toString()) : parseFloat(item[0].amount);
@@ -1420,6 +1519,32 @@ export async function updateServiceOrderItem(id: number, data: Partial<InsertSer
   // Recalcular totais da OS
   await recalculateServiceOrderTotals(item[0].serviceOrderId);
   
+  // Se OS estava concluída, atualizar devedor com a diferença
+  if (wasCompleted && os[0].customerName) {
+    const updatedOs = await db.select().from(serviceOrders).where(eq(serviceOrders.id, item[0].serviceOrderId)).limit(1);
+    const newOsTotal = parseFloat(updatedOs[0].totalAmount);
+    const diff = newOsTotal - oldOsTotal;
+    
+    if (diff !== 0) {
+      const debtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, os[0].userId), eq(debtors.name, os[0].customerName))
+      ).limit(1);
+      if (debtor[0]) {
+        const newTotal = (parseFloat(debtor[0].totalAmount) + diff).toFixed(2);
+        const newRemaining = (parseFloat(debtor[0].remainingAmount) + diff).toFixed(2);
+        if (parseFloat(newTotal) <= 0) {
+          await db.delete(debtors).where(eq(debtors.id, debtor[0].id));
+        } else {
+          await db.update(debtors).set({ 
+            totalAmount: newTotal, 
+            remainingAmount: newRemaining, 
+            status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" 
+          }).where(eq(debtors.id, debtor[0].id));
+        }
+      }
+    }
+  }
+  
   // Verificar se todos os itens estão concluídos
   await checkAndUpdateServiceOrderStatus(item[0].serviceOrderId);
   
@@ -1434,10 +1559,41 @@ export async function deleteServiceOrderItem(id: number) {
   const item = await db.select().from(serviceOrderItems).where(eq(serviceOrderItems.id, id)).limit(1);
   if (!item[0]) throw new Error("Item not found");
   
+  // Buscar OS para checar se está concluída
+  const os = await db.select().from(serviceOrders).where(eq(serviceOrders.id, item[0].serviceOrderId)).limit(1);
+  const wasCompleted = os[0]?.status === "completed";
+  const oldOsTotal = wasCompleted ? parseFloat(os[0].totalAmount) : 0;
+  
   await db.delete(serviceOrderItems).where(eq(serviceOrderItems.id, id));
   
   // Recalcular totais da OS
   await recalculateServiceOrderTotals(item[0].serviceOrderId);
+  
+  // Se OS estava concluída, atualizar devedor com a diferença
+  if (wasCompleted && os[0].customerName) {
+    const updatedOs = await db.select().from(serviceOrders).where(eq(serviceOrders.id, item[0].serviceOrderId)).limit(1);
+    const newOsTotal = parseFloat(updatedOs[0].totalAmount);
+    const diff = newOsTotal - oldOsTotal;
+    
+    if (diff !== 0) {
+      const debtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, os[0].userId), eq(debtors.name, os[0].customerName))
+      ).limit(1);
+      if (debtor[0]) {
+        const newTotal = (parseFloat(debtor[0].totalAmount) + diff).toFixed(2);
+        const newRemaining = (parseFloat(debtor[0].remainingAmount) + diff).toFixed(2);
+        if (parseFloat(newTotal) <= 0) {
+          await db.delete(debtors).where(eq(debtors.id, debtor[0].id));
+        } else {
+          await db.update(debtors).set({ 
+            totalAmount: newTotal, 
+            remainingAmount: newRemaining, 
+            status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" 
+          }).where(eq(debtors.id, debtor[0].id));
+        }
+      }
+    }
+  }
   
   return { success: true };
 }
