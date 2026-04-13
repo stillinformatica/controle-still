@@ -1272,6 +1272,16 @@ export const supplierPaymentsApi = {
     if (account) {
       await supabase.from("bank_accounts").update({ balance: account.balance - amount }).eq("id", input.accountId);
     }
+    // Create transaction record for bank history
+    await supabase.from("transactions").insert({
+      user_id: userId,
+      account_id: input.accountId,
+      amount,
+      type: "expense" as const,
+      description: `Pagamento fornecedor: ${input.supplierName}${input.notes ? ' - ' + input.notes : ''}`,
+      date: input.date,
+      category: "fornecedor",
+    });
     return mapKeys(data);
   },
 };

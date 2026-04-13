@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { suppliersApi } from "@/lib/api";
-import { Plus, Truck, Trash2, Edit, History } from "lucide-react";
+import { suppliersApi, supplierPaymentsApi, bankAccountsApi } from "@/lib/api";
+import { Plus, Truck, Trash2, Edit, History, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Suppliers() {
@@ -20,11 +21,27 @@ export default function Suppliers() {
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [formData, setFormData] = useState({ name: "", contact: "", phone: "", email: "", notes: "" });
   const [historySupplier, setHistorySupplier] = useState<any>(null);
+  const [paymentSupplier, setPaymentSupplier] = useState<any>(null);
+  const [paymentData, setPaymentData] = useState({ amount: "", date: new Date().toISOString().split("T")[0], accountId: "", notes: "" });
 
   const { data: suppliers, isLoading } = useQuery({ queryKey: ["suppliers"], queryFn: suppliersApi.list, enabled: !!user });
+  const { data: bankAccounts } = useQuery({ queryKey: ["bankAccounts"], queryFn: bankAccountsApi.list, enabled: !!user });
   const createMutation = useMutation({ mutationFn: suppliersApi.create, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["suppliers"] }); toast.success("Fornecedor cadastrado!"); resetForm(); }, onError: (e: any) => toast.error("Erro: " + e.message) });
   const updateMutation = useMutation({ mutationFn: suppliersApi.update, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["suppliers"] }); toast.success("Fornecedor atualizado!"); resetForm(); }, onError: (e: any) => toast.error("Erro: " + e.message) });
   const deleteMutation = useMutation({ mutationFn: suppliersApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["suppliers"] }); toast.success("Fornecedor excluído!"); }, onError: (e: any) => toast.error("Erro: " + e.message) });
+  const paymentMutation = useMutation({
+    mutationFn: supplierPaymentsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["bankAccounts"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["supplier-payments"] });
+      toast.success("Pagamento registrado!");
+      setPaymentSupplier(null);
+      setPaymentData({ amount: "", date: new Date().toISOString().split("T")[0], accountId: "", notes: "" });
+    },
+    onError: (e: any) => toast.error("Erro: " + e.message),
+  });
 
   const { data: purchases } = useQuery({
     queryKey: ["supplier-purchases", historySupplier?.name],
@@ -41,6 +58,17 @@ export default function Suppliers() {
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (editingSupplier) updateMutation.mutate({ id: editingSupplier.id, ...formData }); else createMutation.mutate(formData); };
   const handleEdit = (s: any) => { setEditingSupplier(s); setFormData({ name: s.name, contact: "", phone: s.phone || "", email: s.email || "", notes: s.notes || "" }); setIsDialogOpen(true); };
   const handleDelete = (id: number) => { if (confirm("Excluir este fornecedor?")) deleteMutation.mutate({ id }); };
+  const handlePaymentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentData.accountId) { toast.error("Selecione um banco"); return; }
+    paymentMutation.mutate({
+      supplierName: paymentSupplier.name,
+      amount: paymentData.amount,
+      date: paymentData.date,
+      accountId: parseInt(paymentData.accountId),
+      notes: paymentData.notes || undefined,
+    });
+  };
 
   const formatCurrency = (v: string | number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(typeof v === "string" ? parseFloat(v) : v);
   const formatDate = (ds: string) => { const [y, m, d] = ds.split("-"); return `${d}/${m}/${y}`; };
@@ -53,7 +81,9 @@ export default function Suppliers() {
           {isLoading ? <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>
           : suppliers && suppliers.length > 0 ? (
             <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Telefone</TableHead><TableHead>Email</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>
-              {[...suppliers].sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR')).map((s: any) => (<TableRow key={s.id}><TableCell className="font-medium">{s.name}</TableCell><TableCell>{s.phone || "-"}</TableCell><TableCell>{s.email || "-"}</TableCell><TableCell className="text-right"><div className="flex justify-end space-x-1"><Button variant="ghost" size="icon" onClick={() => setHistorySupplier(s)} title="Histórico"><History className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => handleEdit(s)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell></TableRow>))}
+              {[...suppliers].sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR')).map((s: any) => (<TableRow key={s.id}><TableCell className="font-medium">{s.name}</TableCell><TableCell>{s.phone || "-"}</TableCell><TableCell>{s.email || "-"}</TableCell><TableCell className="text-right"><div className="flex justify-end space-x-1">
+                <Button variant="ghost" size="icon" onClick={() => { setPaymentSupplier(s); setPaymentData({ amount: "", date: new Date().toISOString().split("T")[0], accountId: "", notes: "" }); }} title="Pagamento"><DollarSign className="h-4 w-4 text-green-600" /></Button>
+                <Button variant="ghost" size="icon" onClick={() => setHistorySupplier(s)} title="Histórico"><History className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => handleEdit(s)}><Edit className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></TableCell></TableRow>))}
             </TableBody></Table></div>
           ) : <div className="flex flex-col items-center justify-center py-12"><Truck className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground text-center">Nenhum fornecedor cadastrado.</p></div>}
         </CardContent></Card>
@@ -63,6 +93,47 @@ export default function Suppliers() {
           <form onSubmit={handleSubmit}><div className="space-y-4 py-4"><div className="space-y-2"><Label>Nome *</Label><Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required /></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label>Telefone</Label><Input value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} /></div><div className="space-y-2"><Label>Email</Label><Input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} /></div></div><div className="space-y-2"><Label>Observações</Label><Input value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} /></div></div>
           <DialogFooter><Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button><Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>{editingSupplier ? "Salvar" : "Cadastrar"}</Button></DialogFooter></form>
         </DialogContent></Dialog>
+
+        {/* Dialog de pagamento */}
+        <Dialog open={!!paymentSupplier} onOpenChange={(o) => { if (!o) setPaymentSupplier(null); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Pagamento - {paymentSupplier?.name}</DialogTitle>
+              <DialogDescription>Registrar pagamento ao fornecedor</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handlePaymentSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Valor *</Label>
+                  <Input type="number" step="0.01" min="0.01" value={paymentData.amount} onChange={(e) => setPaymentData({...paymentData, amount: e.target.value})} required placeholder="0,00" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data *</Label>
+                  <Input type="date" value={paymentData.date} onChange={(e) => setPaymentData({...paymentData, date: e.target.value})} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Banco *</Label>
+                  <Select value={paymentData.accountId} onValueChange={(v) => setPaymentData({...paymentData, accountId: v})}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o banco" /></SelectTrigger>
+                    <SelectContent>
+                      {(bankAccounts || []).filter((a: any) => a.isActive).map((a: any) => (
+                        <SelectItem key={a.id} value={String(a.id)}>{a.name} - {formatCurrency(a.balance)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Observações</Label>
+                  <Input value={paymentData.notes} onChange={(e) => setPaymentData({...paymentData, notes: e.target.value})} placeholder="Opcional" />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setPaymentSupplier(null)}>Cancelar</Button>
+                <Button type="submit" disabled={paymentMutation.isPending}>{paymentMutation.isPending ? "Registrando..." : "Registrar Pagamento"}</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* Dialog de histórico */}
         <Dialog open={!!historySupplier} onOpenChange={(o) => { if (!o) setHistorySupplier(null); }}>
@@ -76,7 +147,6 @@ export default function Suppliers() {
               const totalPayments = (payments || []).reduce((s: number, p: any) => s + parseFloat(p.amount), 0);
               const balance = totalPurchases - totalPayments;
               
-              // Build combined timeline sorted by date, then creation time, ensuring carry-over entries come first
               const allEntries = [
                 ...(purchases || []).map((p: any) => ({
                   ...p,
