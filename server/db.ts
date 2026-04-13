@@ -722,14 +722,15 @@ export async function updateService(id: number, userId: number, data: Partial<In
     const customerName = data.customerName || oldCustomerName;
     
     if (shouldCreateDebtor && newAmount > 0 && customerName) {
-      const existingDebtor = await db.select().from(debtors).where(
+      // Buscar devedor NOVAMENTE após reversão (pode ter sido deletado)
+      const freshDebtor = await db.select().from(debtors).where(
         and(eq(debtors.userId, userId), eq(debtors.name, customerName))
       ).limit(1);
       
-      if (existingDebtor[0]) {
-        const currentTotal = parseFloat(existingDebtor[0].totalAmount);
+      if (freshDebtor[0]) {
+        const currentTotal = parseFloat(freshDebtor[0].totalAmount);
         const newTotal = currentTotal + newAmount;
-        const currentPaid = parseFloat(existingDebtor[0].paidAmount || "0");
+        const currentPaid = parseFloat(freshDebtor[0].paidAmount || "0");
         const newRemaining = newTotal - currentPaid;
         
         await db.update(debtors)
@@ -739,7 +740,7 @@ export async function updateService(id: number, userId: number, data: Partial<In
             status: newRemaining <= 0 ? "paid" : (currentPaid > 0 ? "partial" : "pending"),
             updatedAt: new Date(),
           })
-          .where(eq(debtors.id, existingDebtor[0].id));
+          .where(eq(debtors.id, freshDebtor[0].id));
       } else {
         await db.insert(debtors).values({
           userId,
