@@ -681,33 +681,54 @@ export async function updateService(id: number, userId: number, data: Partial<In
   const currentService = await db.select().from(services).where(and(eq(services.id, id), eq(services.userId, userId))).limit(1);
   if (!currentService[0]) throw new Error("Service not found");
   
+  const oldService = currentService[0];
+  const oldAmount = parseFloat((oldService.amount || "0").toString());
+  const newAmount = data.amount ? parseFloat(data.amount.toString()) : oldAmount;
+  
   if (data.amount || data.cost) {
-    const amount = data.amount ? parseFloat(data.amount.toString()) : parseFloat((currentService[0].amount || "0").toString());
-    const cost = data.cost ? parseFloat(data.cost.toString()) : parseFloat((currentService[0].cost || "0").toString());
-    data.profit = (amount - cost).toString();
+    const cost = data.cost ? parseFloat(data.cost.toString()) : parseFloat((oldService.cost || "0").toString());
+    data.profit = (newAmount - cost).toString();
+  }
+  
+  // Se o serviço JÁ estava concluído e tinha devedor, reverter valor antigo do devedor
+  const wasCompleted = oldService.status === "completed";
+  const oldCustomerName = oldService.customerName;
+  const oldServiceType = oldService.serviceType;
+  const hadDebtor = wasCompleted && oldCustomerName && oldServiceType !== "no_repair" && oldAmount > 0;
+  
+  if (hadDebtor) {
+    const oldDebtor = await db.select().from(debtors).where(
+      and(eq(debtors.userId, userId), eq(debtors.name, oldCustomerName!))
+    ).limit(1);
+    if (oldDebtor[0]) {
+      const newTotal = (parseFloat(oldDebtor[0].totalAmount) - oldAmount).toFixed(2);
+      const newRemaining = (parseFloat(oldDebtor[0].remainingAmount) - oldAmount).toFixed(2);
+      if (parseFloat(newTotal) <= 0) {
+        await db.delete(debtors).where(eq(debtors.id, oldDebtor[0].id));
+      } else {
+        await db.update(debtors).set({ totalAmount: newTotal, remainingAmount: newRemaining, status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" }).where(eq(debtors.id, oldDebtor[0].id));
+      }
+    }
   }
   
   // Se tipo mudou para "repaired", "test" ou "no_repair", marcar como concluído automaticamente
-  if (data.serviceType && (data.serviceType === "repaired" || data.serviceType === "test" || data.serviceType === "no_repair")) {
-    data.status = "completed";
+  const newServiceType = data.serviceType || oldServiceType;
+  const willComplete = (data.serviceType && (data.serviceType === "repaired" || data.serviceType === "test" || data.serviceType === "no_repair")) || wasCompleted;
+  
+  if (willComplete) {
+    if (data.serviceType) data.status = "completed";
     
-    // "Sem Conserto" não gera débito para o cliente
-    const shouldCreateDebtor = data.serviceType !== "no_repair";
+    const shouldCreateDebtor = newServiceType !== "no_repair";
+    const customerName = data.customerName || oldCustomerName;
     
-    // Criar/atualizar devedor com o valor do serviço (apenas para consertado/entregue)
-    const amount = data.amount ? parseFloat(data.amount.toString()) : parseFloat((currentService[0].amount || "0").toString());
-    const customerName = data.customerName || currentService[0].customerName;
-    
-    if (shouldCreateDebtor && amount > 0 && customerName) {
-      // Verificar se já existe devedor com esse nome
+    if (shouldCreateDebtor && newAmount > 0 && customerName) {
       const existingDebtor = await db.select().from(debtors).where(
         and(eq(debtors.userId, userId), eq(debtors.name, customerName))
       ).limit(1);
       
       if (existingDebtor[0]) {
-        // Atualizar devedor existente
         const currentTotal = parseFloat(existingDebtor[0].totalAmount);
-        const newTotal = currentTotal + amount;
+        const newTotal = currentTotal + newAmount;
         const currentPaid = parseFloat(existingDebtor[0].paidAmount || "0");
         const newRemaining = newTotal - currentPaid;
         
@@ -720,13 +741,12 @@ export async function updateService(id: number, userId: number, data: Partial<In
           })
           .where(eq(debtors.id, existingDebtor[0].id));
       } else {
-        // Criar novo devedor
         await db.insert(debtors).values({
           userId,
           name: customerName,
-          totalAmount: amount.toFixed(2),
+          totalAmount: newAmount.toFixed(2),
           paidAmount: "0",
-          remainingAmount: amount.toFixed(2),
+          remainingAmount: newAmount.toFixed(2),
           status: "pending",
         });
       }
