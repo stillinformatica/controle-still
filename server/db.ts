@@ -1354,6 +1354,38 @@ export async function deleteServiceOrder(id: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
+  // Buscar OS antes de deletar
+  const order = await db.select().from(serviceOrders).where(
+    and(eq(serviceOrders.id, id), eq(serviceOrders.userId, userId))
+  ).limit(1);
+  
+  if (!order[0]) throw new Error("OS não encontrada");
+  
+  const os = order[0];
+  
+  // Se OS estava concluída e tinha cliente, reverter devedor
+  if (os.status === "completed" && os.customerName) {
+    const totalAmount = parseFloat(os.totalAmount);
+    if (totalAmount > 0) {
+      const debtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, userId), eq(debtors.name, os.customerName))
+      ).limit(1);
+      if (debtor[0]) {
+        const newTotal = (parseFloat(debtor[0].totalAmount) - totalAmount).toFixed(2);
+        const newRemaining = (parseFloat(debtor[0].remainingAmount) - totalAmount).toFixed(2);
+        if (parseFloat(newTotal) <= 0) {
+          await db.delete(debtors).where(eq(debtors.id, debtor[0].id));
+        } else {
+          await db.update(debtors).set({ 
+            totalAmount: newTotal, 
+            remainingAmount: newRemaining, 
+            status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" 
+          }).where(eq(debtors.id, debtor[0].id));
+        }
+      }
+    }
+  }
+  
   // Deletar itens primeiro
   await db.delete(serviceOrderItems).where(eq(serviceOrderItems.serviceOrderId, id));
   
