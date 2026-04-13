@@ -1499,6 +1499,11 @@ export async function updateServiceOrderItem(id: number, data: Partial<InsertSer
   const item = await db.select().from(serviceOrderItems).where(eq(serviceOrderItems.id, id)).limit(1);
   if (!item[0]) throw new Error("Item not found");
   
+  // Buscar OS para checar se está concluída
+  const os = await db.select().from(serviceOrders).where(eq(serviceOrders.id, item[0].serviceOrderId)).limit(1);
+  const wasCompleted = os[0]?.status === "completed";
+  const oldOsTotal = wasCompleted ? parseFloat(os[0].totalAmount) : 0;
+  
   // Recalcular lucro se amount ou cost mudaram
   if (data.amount || data.cost) {
     const currentAmount = data.amount ? parseFloat(data.amount.toString()) : parseFloat(item[0].amount);
@@ -1513,6 +1518,32 @@ export async function updateServiceOrderItem(id: number, data: Partial<InsertSer
   
   // Recalcular totais da OS
   await recalculateServiceOrderTotals(item[0].serviceOrderId);
+  
+  // Se OS estava concluída, atualizar devedor com a diferença
+  if (wasCompleted && os[0].customerName) {
+    const updatedOs = await db.select().from(serviceOrders).where(eq(serviceOrders.id, item[0].serviceOrderId)).limit(1);
+    const newOsTotal = parseFloat(updatedOs[0].totalAmount);
+    const diff = newOsTotal - oldOsTotal;
+    
+    if (diff !== 0) {
+      const debtor = await db.select().from(debtors).where(
+        and(eq(debtors.userId, os[0].userId), eq(debtors.name, os[0].customerName))
+      ).limit(1);
+      if (debtor[0]) {
+        const newTotal = (parseFloat(debtor[0].totalAmount) + diff).toFixed(2);
+        const newRemaining = (parseFloat(debtor[0].remainingAmount) + diff).toFixed(2);
+        if (parseFloat(newTotal) <= 0) {
+          await db.delete(debtors).where(eq(debtors.id, debtor[0].id));
+        } else {
+          await db.update(debtors).set({ 
+            totalAmount: newTotal, 
+            remainingAmount: newRemaining, 
+            status: parseFloat(newRemaining) <= 0 ? "paid" : "pending" 
+          }).where(eq(debtors.id, debtor[0].id));
+        }
+      }
+    }
+  }
   
   // Verificar se todos os itens estão concluídos
   await checkAndUpdateServiceOrderStatus(item[0].serviceOrderId);
