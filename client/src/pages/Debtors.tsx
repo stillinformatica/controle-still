@@ -170,7 +170,7 @@ export default function Debtors() {
                       <div className="flex justify-between text-xs text-muted-foreground"><span>Progresso</span><span>{progress.toFixed(0)}%</span></div>
                       <div className="w-full bg-muted rounded-full h-2"><div className="bg-green-600 h-2 rounded-full transition-all" style={{ width: `${Math.min(progress, 100)}%` }} /></div>
                     </div>
-                    {remaining > 0 && <Button className="w-full" variant="outline" onClick={() => handleOpenPayment(debtor)}><DollarSign className="mr-2 h-4 w-4" />Registrar Pagamento</Button>}
+                    {remaining > 0 && <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => handleOpenPayment(debtor)}><DollarSign className="mr-2 h-4 w-4" />Registrar Pagamento</Button>}
                   </CardContent>
                 </Card>
               );
