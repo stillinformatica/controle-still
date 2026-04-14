@@ -672,6 +672,133 @@ export const salesApi = {
 
 // ── Services ────────────────────────────────────────────────────────────────
 
+const completedServiceTypes = new Set(["no_repair", "repaired", "test"]);
+const debtorServiceTypes = new Set(["repaired", "test"]);
+
+function toServiceAmount(value: unknown) {
+  const amount = typeof value === "number" ? value : parseFloat(String(value ?? 0));
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function getServiceDebtorDescription(osNumber?: string | null, description?: string | null) {
+  const osLabel = osNumber?.trim() || "S/N";
+  const serviceLabel = description?.trim() || "Serviço";
+  return `Serviço OS ${osLabel} - ${serviceLabel}`;
+}
+
+function isDebtorTrackedService(service?: any) {
+  return !!service &&
+    service.status === "completed" &&
+    debtorServiceTypes.has(service.service_type) &&
+    !!service.customer_name &&
+    toServiceAmount(service.amount) > 0;
+}
+
+async function findServiceDebtorRecord(userId: string, service?: any) {
+  if (!service?.customer_name) return null;
+
+  const exactDescription = getServiceDebtorDescription(service.os_number, service.description);
+  const exactRows = throwIfError(
+    await supabase
+      .from("debtors")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("name", service.customer_name)
+      .eq("description", exactDescription)
+      .order("created_at", { ascending: false })
+      .limit(1)
+  );
+
+  if (exactRows.length > 0) return exactRows[0];
+
+  if (!service.os_number) return null;
+
+  const fallbackRows = throwIfError(
+    await supabase
+      .from("debtors")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("name", service.customer_name)
+      .ilike("description", `Serviço OS ${service.os_number} -%`)
+      .order("created_at", { ascending: false })
+      .limit(1)
+  );
+
+  return fallbackRows[0] ?? null;
+}
+
+async function syncServiceDebtorRecord(userId: string, previousService: any | null, nextService: any | null) {
+  const hadTrackedDebtor = isDebtorTrackedService(previousService);
+  const shouldTrackDebtor = isDebtorTrackedService(nextService);
+
+  let debtorRecord = hadTrackedDebtor ? await findServiceDebtorRecord(userId, previousService) : null;
+  if (!debtorRecord && shouldTrackDebtor) {
+    debtorRecord = await findServiceDebtorRecord(userId, nextService);
+  }
+
+  if (!shouldTrackDebtor) {
+    if (!hadTrackedDebtor || !debtorRecord) return;
+
+    const paidAmount = toServiceAmount(debtorRecord.paid_amount);
+    if (paidAmount <= 0) {
+      throwIfError(await supabase.from("debtors").delete().eq("id", debtorRecord.id).eq("user_id", userId));
+      return;
+    }
+
+    throwIfError(
+      await supabase
+        .from("debtors")
+        .update({
+          total_amount: paidAmount,
+          remaining_amount: 0,
+          status: "paid",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", debtorRecord.id)
+        .eq("user_id", userId)
+    );
+    return;
+  }
+
+  const totalAmount = toServiceAmount(nextService.amount);
+  const description = getServiceDebtorDescription(nextService.os_number, nextService.description);
+
+  if (debtorRecord) {
+    const paidAmount = toServiceAmount(debtorRecord.paid_amount);
+    const adjustedTotal = Math.max(totalAmount, paidAmount);
+    const remainingAmount = Math.max(0, adjustedTotal - paidAmount);
+    const status = remainingAmount <= 0 ? "paid" : paidAmount > 0 ? "partial" : "pending";
+
+    throwIfError(
+      await supabase
+        .from("debtors")
+        .update({
+          name: nextService.customer_name,
+          total_amount: adjustedTotal,
+          remaining_amount: remainingAmount,
+          status,
+          description,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", debtorRecord.id)
+        .eq("user_id", userId)
+    );
+    return;
+  }
+
+  throwIfError(
+    await supabase.from("debtors").insert({
+      user_id: userId,
+      name: nextService.customer_name,
+      total_amount: totalAmount,
+      paid_amount: 0,
+      remaining_amount: totalAmount,
+      status: "pending",
+      description,
+    })
+  );
+}
+
 export const servicesApi = {
   list: async (_params?: any) => {
     const userId = await getUserId();
@@ -698,17 +825,19 @@ export const servicesApi = {
   create: async (input: any) => {
     const userId = await getUserId();
     const serviceType = input.serviceType || "pending";
-    const isCompleted = serviceType === "no_repair" || serviceType === "repaired" || serviceType === "test";
-    const amount = input.amount ? parseFloat(input.amount) : 0;
-    const cost = input.cost ? parseFloat(input.cost) : 0;
+    const isCompleted = completedServiceTypes.has(serviceType);
+    const amount = input.amount === undefined || input.amount === null || input.amount === "" ? null : toServiceAmount(input.amount);
+    const cost = input.cost === undefined || input.cost === null || input.cost === "" ? 0 : toServiceAmount(input.cost);
     const data = throwIfError(
       await supabase.from("services").insert({
-        user_id: userId, date: input.date, description: input.description,
+        user_id: userId,
+        date: input.date,
+        description: input.description,
         service_type: serviceType,
         status: isCompleted ? "completed" : "open",
-        amount: input.amount ? parseFloat(input.amount) : null,
-        cost: cost,
-        profit: amount - cost,
+        amount,
+        cost,
+        profit: (amount ?? 0) - cost,
         customer_name: input.customerName || null,
         os_number: input.osNumber || null,
         serial_number: input.serialNumber || null,
@@ -716,69 +845,55 @@ export const servicesApi = {
         storage_location: input.storageLocation || null,
       }).select().single()
     );
-    // Auto-create debtor for repaired/test services with amount
-    if ((serviceType === "repaired" || serviceType === "test") && amount > 0 && input.customerName) {
-      await supabase.from("debtors").insert({
-        user_id: userId,
-        name: input.customerName,
-        total_amount: amount,
-        remaining_amount: amount,
-        description: `Serviço OS ${input.osNumber || "S/N"} - ${input.description}`,
-      });
-    }
+
+    await syncServiceDebtorRecord(userId, null, data);
     return mapKeys(data);
   },
   update: async (input: any) => {
     const userId = await getUserId();
-    // Fetch current service to detect status change
-    const { data: currentService } = await supabase.from("services").select("*").eq("id", input.id).eq("user_id", userId).single();
+    const currentService = throwIfError(
+      await supabase.from("services").select("*").eq("id", input.id).eq("user_id", userId).single()
+    );
+
     const updates: any = { updated_at: new Date().toISOString() };
     if (input.date !== undefined) updates.date = input.date;
     if (input.description !== undefined) updates.description = input.description;
     if (input.serviceType !== undefined) {
       updates.service_type = input.serviceType;
-      const isCompleted = input.serviceType === "no_repair" || input.serviceType === "repaired" || input.serviceType === "test";
-      updates.status = isCompleted ? "completed" : "open";
+      updates.status = completedServiceTypes.has(input.serviceType) ? "completed" : "open";
     }
-    if (input.amount !== undefined) updates.amount = input.amount ? parseFloat(input.amount) : null;
-    if (input.cost !== undefined) updates.cost = input.cost ? parseFloat(input.cost) : 0;
-    if (input.amount !== undefined || input.cost !== undefined) {
-      const amt = input.amount ? parseFloat(input.amount) : 0;
-      const cst = input.cost ? parseFloat(input.cost) : 0;
-      updates.profit = amt - cst;
-    }
+
+    const nextAmount = input.amount !== undefined
+      ? (input.amount === null || input.amount === "" ? 0 : toServiceAmount(input.amount))
+      : toServiceAmount(currentService.amount);
+    const nextCost = input.cost !== undefined
+      ? (input.cost === null || input.cost === "" ? 0 : toServiceAmount(input.cost))
+      : toServiceAmount(currentService.cost);
+
+    if (input.amount !== undefined) updates.amount = input.amount === null || input.amount === "" ? null : nextAmount;
+    if (input.cost !== undefined) updates.cost = nextCost;
+    if (input.amount !== undefined || input.cost !== undefined) updates.profit = nextAmount - nextCost;
     if (input.customerName !== undefined) updates.customer_name = input.customerName;
     if (input.osNumber !== undefined) updates.os_number = input.osNumber;
     if (input.serialNumber !== undefined) updates.serial_number = input.serialNumber;
     if (input.accountId !== undefined) updates.account_id = input.accountId || null;
     if (input.storageLocation !== undefined) updates.storage_location = input.storageLocation;
+
     const data = throwIfError(
       await supabase.from("services").update(updates).eq("id", input.id).eq("user_id", userId).select().single()
     );
-    // Auto-create debtor if status changed to completed (repaired/test) and wasn't completed before
-    const newType = input.serviceType || currentService?.service_type;
-    const wasCompleted = currentService?.status === "completed";
-    const isNowCompleted = (newType === "repaired" || newType === "test") && updates.status === "completed";
-    if (isNowCompleted && !wasCompleted) {
-      const amount = updates.amount ?? currentService?.amount ?? 0;
-      const customerName = updates.customer_name ?? currentService?.customer_name;
-      const osNumber = updates.os_number ?? currentService?.os_number;
-      const description = updates.description ?? currentService?.description;
-      if (amount > 0 && customerName) {
-        await supabase.from("debtors").insert({
-          user_id: userId,
-          name: customerName,
-          total_amount: amount,
-          remaining_amount: amount,
-          description: `Serviço OS ${osNumber || "S/N"} - ${description}`,
-        });
-      }
-    }
+
+    await syncServiceDebtorRecord(userId, currentService, data);
     return mapKeys(data);
   },
   delete: async (input: { id: number }) => {
     const userId = await getUserId();
+    const currentService = throwIfError(
+      await supabase.from("services").select("*").eq("id", input.id).eq("user_id", userId).single()
+    );
+
     throwIfError(await supabase.from("services").delete().eq("id", input.id).eq("user_id", userId));
+    await syncServiceDebtorRecord(userId, currentService, null);
   },
 };
 

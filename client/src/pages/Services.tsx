@@ -120,17 +120,32 @@ export default function Services() {
 
   const createMutation = useMutation({
     mutationFn: servicesApi.create,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["services"] }); queryClient.invalidateQueries({ queryKey: ["dashboard"] }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["debtors"] });
+    },
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
   const updateMutation = useMutation({
     mutationFn: servicesApi.update,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["services"] }); queryClient.invalidateQueries({ queryKey: ["dashboard"] }); toast.success("Serviço atualizado!"); resetForm(); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["debtors"] });
+      toast.success("Serviço atualizado!");
+      resetForm();
+    },
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
   const deleteMutation = useMutation({
     mutationFn: servicesApi.delete,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["services"] }); queryClient.invalidateQueries({ queryKey: ["dashboard"] }); toast.success("Serviço excluído!"); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["debtors"] });
+      toast.success("Serviço excluído!");
+    },
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
 
