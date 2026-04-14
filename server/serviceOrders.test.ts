@@ -79,4 +79,49 @@ describe("Service Orders - Timezone Fix", () => {
     expect(entryDateStr).toBe(expectedDate);
     expect(entryDateStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
+
+  it("should update debtor total correctly when editing item from completed OS", async () => {
+    const osNumber = `T${timestamp.toString().slice(-5)}-2`;
+
+    const created = await db.createServiceOrder({
+      userId: testUserId,
+      osNumber,
+      customerName: "Sonia Teste",
+      entryDate: "2026-04-14" as any,
+      status: "open",
+      totalAmount: "0",
+      totalCost: "0",
+      totalProfit: "0",
+    });
+
+    const orderId = Number(created[0].insertId);
+
+    const itemResult = await db.createServiceOrderItem({
+      serviceOrderId: orderId,
+      itemNumber: 1,
+      itemCode: `${osNumber}-1`,
+      description: "Reparo",
+      amount: "100.00",
+      cost: "20.00",
+      profit: "80.00",
+      serviceType: "repaired",
+      isCompleted: true,
+    });
+
+    const itemId = Number(itemResult[0].insertId);
+
+    let debtors = await db.getDebtors(testUserId);
+    let debtor = debtors.find((d) => d.name === "Sonia Teste");
+    expect(debtor).toBeDefined();
+    expect(Number(debtor?.totalAmount)).toBe(100);
+    expect(Number(debtor?.remainingAmount)).toBe(100);
+
+    await db.updateServiceOrderItem(itemId, { amount: "50.00" });
+
+    debtors = await db.getDebtors(testUserId);
+    debtor = debtors.find((d) => d.name === "Sonia Teste");
+    expect(debtor).toBeDefined();
+    expect(Number(debtor?.totalAmount)).toBe(50);
+    expect(Number(debtor?.remainingAmount)).toBe(50);
+  });
 });
