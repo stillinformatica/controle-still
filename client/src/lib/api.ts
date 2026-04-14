@@ -403,9 +403,7 @@ export const productKitsApi = {
       )
     );
     const products = productIds.length
-      ? throwIfError(
-          await supabase.from("products").select("id, name").in("id", productIds)
-        )
+      ? (await supabase.from("products").select("id, name").in("id", productIds)).data || []
       : [];
 
     const productNameById = new Map(products.map((product: any) => [product.id, product.name]));
