@@ -408,7 +408,7 @@ function KitsList() {
       description: editForm.description,
       salePrice: editForm.salePrice,
       category: editForm.category,
-      ...(editItems.length > 0 ? { items: editItems.map(i => ({ productId: i.productId, quantity: i.quantity })) } : {}),
+      items: editItems.map(i => ({ productId: i.productId, quantity: i.quantity })),
     });
   };
 
