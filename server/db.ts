@@ -1622,6 +1622,9 @@ async function recalculateServiceOrderTotals(serviceOrderId: number) {
 async function checkAndUpdateServiceOrderStatus(serviceOrderId: number) {
   const db = await getDb();
   if (!db) return;
+
+  const order = await db.select().from(serviceOrders).where(eq(serviceOrders.id, serviceOrderId)).limit(1);
+  if (!order[0]) return;
   
   const items = await getServiceOrderItems(serviceOrderId);
   
@@ -1633,13 +1636,13 @@ async function checkAndUpdateServiceOrderStatus(serviceOrderId: number) {
       .update(serviceOrders)
       .set({
         status: "completed",
-        completedAt: new Date(),
+        completedAt: order[0].completedAt || new Date(),
+        updatedAt: new Date(),
       })
       .where(eq(serviceOrders.id, serviceOrderId));
-    
-    // Criar devedor com o valor total
-    const order = await db.select().from(serviceOrders).where(eq(serviceOrders.id, serviceOrderId)).limit(1);
-    if (order[0]) {
+
+    // Só aplica ao devedor na transição de open -> completed
+    if (order[0].status !== "completed" && order[0].customerName) {
       // Verificar se já existe devedor
       const existingDebtor = await db.select().from(debtors).where(
         and(eq(debtors.userId, order[0].userId), eq(debtors.name, order[0].customerName))
@@ -1672,12 +1675,41 @@ async function checkAndUpdateServiceOrderStatus(serviceOrderId: number) {
       }
     }
   } else {
+    if (order[0].status === "completed" && order[0].customerName) {
+      const totalAmount = parseFloat((order[0].totalAmount || "0").toString());
+
+      if (totalAmount > 0) {
+        const debtor = await db.select().from(debtors).where(
+          and(eq(debtors.userId, order[0].userId), eq(debtors.name, order[0].customerName))
+        ).limit(1);
+
+        if (debtor[0]) {
+          const newTotal = (parseFloat(debtor[0].totalAmount) - totalAmount).toFixed(2);
+          const newRemaining = (parseFloat(debtor[0].remainingAmount) - totalAmount).toFixed(2);
+
+          if (parseFloat(newTotal) <= 0) {
+            await db.delete(debtors).where(eq(debtors.id, debtor[0].id));
+          } else {
+            await db.update(debtors)
+              .set({
+                totalAmount: newTotal,
+                remainingAmount: newRemaining,
+                status: parseFloat(newRemaining) <= 0 ? "paid" : "pending",
+                updatedAt: new Date(),
+              })
+              .where(eq(debtors.id, debtor[0].id));
+          }
+        }
+      }
+    }
+
     // Se algum item não está concluído, voltar para open
     await db
       .update(serviceOrders)
       .set({
         status: "open",
         completedAt: null,
+        updatedAt: new Date(),
       })
       .where(eq(serviceOrders.id, serviceOrderId));
   }
