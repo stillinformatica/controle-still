@@ -386,15 +386,17 @@ export const productKitsApi = {
   getItems: async (input: { kitId: number }) => {
     const items = throwIfError(
       await supabase.from("product_kit_items").select("*").eq("kit_id", input.kitId)
-    );
+    ) as Array<{ product_id: number | string }>;
 
     if (!items.length) return [];
 
-    const productIds = [...new Set(
-      items
-        .map((item: any) => Number(item.product_id))
-        .filter((productId): productId is number => Number.isInteger(productId) && productId > 0)
-    )];
+    const productIds: number[] = Array.from(
+      new Set(
+        items
+          .map((item) => Number(item.product_id))
+          .filter((productId: number) => Number.isInteger(productId) && productId > 0)
+      )
+    );
     const products = productIds.length
       ? throwIfError(
           await supabase.from("products").select("id, name").in("id", productIds)
