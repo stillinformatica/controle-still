@@ -974,12 +974,12 @@ export const expensesApi = {
     const newDescription = input.description !== undefined ? input.description : oldExpense?.description;
     const newCategory = input.category !== undefined ? input.category : oldExpense?.category;
 
-    if (newIsPaid && newAccountId) {
-      await supabase.from("transactions").insert({
+    if (newIsPaid && newAccountId && newAmount) {
+      await supabase.from("transactions").insert([{
         user_id: userId, account_id: newAccountId, date: newDate,
         description: `Despesa: ${newDescription}`, amount: newAmount,
         type: "expense" as any, category: newCategory,
-      });
+      }]);
       const { data: newAccount } = await supabase.from("bank_accounts").select("balance").eq("id", newAccountId).single();
       if (newAccount) {
         await supabase.from("bank_accounts").update({ balance: newAccount.balance - newAmount }).eq("id", newAccountId);
