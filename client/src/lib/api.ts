@@ -390,7 +390,11 @@ export const productKitsApi = {
 
     if (!items.length) return [];
 
-    const productIds = [...new Set(items.map((item: any) => item.product_id).filter(Boolean))];
+    const productIds = [...new Set(
+      items
+        .map((item: any) => Number(item.product_id))
+        .filter((productId): productId is number => Number.isInteger(productId) && productId > 0)
+    )];
     const products = productIds.length
       ? throwIfError(
           await supabase.from("products").select("id, name").in("id", productIds)
