@@ -909,18 +909,35 @@ export const expensesApi = {
   },
   create: async (input: any) => {
     const userId = await getUserId();
+    const amount = parseFloat(input.amount);
     const data = throwIfError(
       await supabase.from("expenses").insert({
         user_id: userId, date: input.date, description: input.description,
-        amount: parseFloat(input.amount), category: input.category,
+        amount, category: input.category,
         is_paid: input.isPaid || false, is_recurring: input.isRecurring || false,
         due_date: input.dueDate || null, account_id: input.accountId || null,
       }).select().single()
     );
+    // If paid and has account, create transaction to debit bank
+    if (input.isPaid && input.accountId) {
+      await supabase.from("transactions").insert({
+        user_id: userId, account_id: input.accountId, date: input.date,
+        description: `Despesa: ${input.description}`, amount,
+        type: "expense" as any, category: input.category,
+      });
+      // Update bank balance
+      const { data: account } = await supabase.from("bank_accounts").select("balance").eq("id", input.accountId).single();
+      if (account) {
+        await supabase.from("bank_accounts").update({ balance: account.balance - amount }).eq("id", input.accountId);
+      }
+    }
     return mapKeys(data);
   },
   update: async (input: any) => {
     const userId = await getUserId();
+    // Get previous expense to reverse old transaction
+    const { data: oldExpense } = await supabase.from("expenses").select("*").eq("id", input.id).eq("user_id", userId).single();
+    
     const updates: any = { updated_at: new Date().toISOString() };
     if (input.date !== undefined) updates.date = input.date;
     if (input.description !== undefined) updates.description = input.description;
@@ -933,10 +950,63 @@ export const expensesApi = {
     const data = throwIfError(
       await supabase.from("expenses").update(updates).eq("id", input.id).eq("user_id", userId).select().single()
     );
+
+    // Reverse old transaction if it had an account and was paid
+    if (oldExpense && oldExpense.is_paid && oldExpense.account_id) {
+      // Delete old transaction
+      await supabase.from("transactions").delete()
+        .eq("user_id", userId)
+        .eq("account_id", oldExpense.account_id)
+        .like("description", `Despesa: ${oldExpense.description}%`)
+        .eq("type", "expense");
+      // Restore old balance
+      const { data: oldAccount } = await supabase.from("bank_accounts").select("balance").eq("id", oldExpense.account_id).single();
+      if (oldAccount) {
+        await supabase.from("bank_accounts").update({ balance: oldAccount.balance + oldExpense.amount }).eq("id", oldExpense.account_id);
+      }
+    }
+
+    // Create new transaction if paid and has account
+    const newIsPaid = input.isPaid !== undefined ? input.isPaid : oldExpense?.is_paid;
+    const newAccountId = input.accountId !== undefined ? input.accountId : oldExpense?.account_id;
+    const newAmount = input.amount !== undefined ? parseFloat(input.amount) : oldExpense?.amount;
+    const newDate = input.date !== undefined ? input.date : oldExpense?.date;
+    const newDescription = input.description !== undefined ? input.description : oldExpense?.description;
+    const newCategory = input.category !== undefined ? input.category : oldExpense?.category;
+
+    if (newIsPaid && newAccountId) {
+      await supabase.from("transactions").insert({
+        user_id: userId, account_id: newAccountId, date: newDate,
+        description: `Despesa: ${newDescription}`, amount: newAmount,
+        type: "expense" as any, category: newCategory,
+      });
+      const { data: newAccount } = await supabase.from("bank_accounts").select("balance").eq("id", newAccountId).single();
+      if (newAccount) {
+        await supabase.from("bank_accounts").update({ balance: newAccount.balance - newAmount }).eq("id", newAccountId);
+      }
+    }
+
     return mapKeys(data);
   },
   delete: async (input: { id: number }) => {
     const userId = await getUserId();
+    // Get expense before deleting to reverse transaction
+    const { data: expense } = await supabase.from("expenses").select("*").eq("id", input.id).eq("user_id", userId).single();
+    
+    if (expense && expense.is_paid && expense.account_id) {
+      // Delete transaction
+      await supabase.from("transactions").delete()
+        .eq("user_id", userId)
+        .eq("account_id", expense.account_id)
+        .like("description", `Despesa: ${expense.description}%`)
+        .eq("type", "expense");
+      // Restore balance
+      const { data: account } = await supabase.from("bank_accounts").select("balance").eq("id", expense.account_id).single();
+      if (account) {
+        await supabase.from("bank_accounts").update({ balance: account.balance + expense.amount }).eq("id", expense.account_id);
+      }
+    }
+    
     throwIfError(await supabase.from("expenses").delete().eq("id", input.id).eq("user_id", userId));
   },
 };
