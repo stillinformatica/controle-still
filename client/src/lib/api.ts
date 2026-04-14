@@ -373,9 +373,9 @@ export const productKitsApi = {
       const { data: product } = await supabase.from("products").select("cost").eq("id", item.productId).single();
       if (product) totalCost += product.cost * item.quantity;
     }
-    const salePrice = parseFloat(input.salePrice);
+    const salePrice = parseFloat(input.salePrice) || 0;
     const profit = salePrice - totalCost;
-    const profitMargin = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+    const profitMargin = totalCost > 0 ? Math.min((profit / totalCost) * 100, 999999) : 0;
 
     const kit = throwIfError(
       await supabase.from("product_kits").insert({
