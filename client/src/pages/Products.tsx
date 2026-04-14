@@ -401,7 +401,19 @@ function KitsList() {
   const updateKitMutation = useMutation({ mutationFn: productKitsApi.update, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); toast.success("Kit atualizado!"); setEditDialogOpen(false); setEditingKit(null); }, onError: (e: any) => toast.error(e.message) });
 
   const handleEditClick = (kit: any) => { setEditingKit(kit); setEditForm({ name: kit.name, description: kit.description || "", salePrice: kit.salePrice, category: kit.category || "" }); setEditItems([]); setEditDialogOpen(true); };
-  const handleEditSubmit = (e: React.FormEvent) => { e.preventDefault(); if (!editingKit) return; updateKitMutation.mutate({ id: editingKit.id, name: editForm.name, description: editForm.description, salePrice: editForm.salePrice, category: editForm.category, items: editItems.map(i => ({ productId: i.productId, quantity: i.quantity })) }); };
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingKit) return;
+
+    updateKitMutation.mutate({
+      id: editingKit.id,
+      name: editForm.name,
+      description: editForm.description,
+      salePrice: editForm.salePrice,
+      category: editForm.category,
+      ...(editItems.length > 0 ? { items: editItems.map(i => ({ productId: i.productId, quantity: i.quantity })) } : {}),
+    });
+  };
 
   if (isLoading) return <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   if (!kits || kits.length === 0) return <div className="text-center py-8 text-muted-foreground">Nenhum kit cadastrado.</div>;
