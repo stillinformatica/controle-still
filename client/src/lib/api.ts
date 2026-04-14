@@ -25,6 +25,33 @@ function throwIfError(result: { error: any; data: any }) {
   return result.data;
 }
 
+function clampProfitMargin(value: number) {
+  return Math.max(-999.99, Math.min(value, 999.99));
+}
+
+async function updateBankBalanceByDelta(accountId: number, userId: string, delta: number) {
+  const { data: account, error: fetchError } = await supabase
+    .from("bank_accounts")
+    .select("id, balance")
+    .eq("id", accountId)
+    .eq("user_id", userId)
+    .single();
+
+  if (fetchError) throw new Error(fetchError.message);
+
+  const nextBalance = (Number(account.balance) || 0) + delta;
+  const { data: updated, error: updateError } = await supabase
+    .from("bank_accounts")
+    .update({ balance: nextBalance })
+    .eq("id", accountId)
+    .eq("user_id", userId)
+    .select("id, balance")
+    .single();
+
+  if (updateError) throw new Error(updateError.message);
+  return updated;
+}
+
 // ── Auth / Profile ──────────────────────────────────────────────────────────
 
 export const authApi = {
@@ -375,7 +402,7 @@ export const productKitsApi = {
     }
     const salePrice = parseFloat(input.salePrice) || 0;
     const profit = salePrice - totalCost;
-    const profitMargin = totalCost > 0 ? Math.min((profit / totalCost) * 100, 999999) : 0;
+    const profitMargin = totalCost > 0 ? clampProfitMargin((profit / totalCost) * 100) : 0;
 
     const kit = throwIfError(
       await supabase.from("product_kits").insert({
@@ -408,7 +435,7 @@ export const productKitsApi = {
     }
     const salePrice = parseFloat(input.salePrice) || 0;
     const profit = salePrice - totalCost;
-    const profitMargin = totalCost > 0 ? Math.min((profit / totalCost) * 100, 999999) : 0;
+    const profitMargin = totalCost > 0 ? clampProfitMargin((profit / totalCost) * 100) : 0;
 
     throwIfError(
       await supabase.from("product_kits").update({
@@ -925,16 +952,12 @@ export const expensesApi = {
     );
     // If paid and has account, create transaction to debit bank
     if (input.isPaid && input.accountId) {
-      await supabase.from("transactions").insert({
+      throwIfError(await supabase.from("transactions").insert({
         user_id: userId, account_id: input.accountId, date: input.date,
         description: `Despesa: ${input.description}`, amount,
         type: "expense" as any, category: input.category,
-      });
-      // Update bank balance
-      const { data: account } = await supabase.from("bank_accounts").select("balance").eq("id", input.accountId).single();
-      if (account) {
-        await supabase.from("bank_accounts").update({ balance: account.balance - amount }).eq("id", input.accountId);
-      }
+      }));
+      await updateBankBalanceByDelta(input.accountId, userId, -amount);
     }
     return mapKeys(data);
   },
@@ -958,17 +981,12 @@ export const expensesApi = {
 
     // Reverse old transaction if it had an account and was paid
     if (oldExpense && oldExpense.is_paid && oldExpense.account_id) {
-      // Delete old transaction
-      await supabase.from("transactions").delete()
+      throwIfError(await supabase.from("transactions").delete()
         .eq("user_id", userId)
         .eq("account_id", oldExpense.account_id)
         .like("description", `Despesa: ${oldExpense.description}%`)
-        .eq("type", "expense");
-      // Restore old balance
-      const { data: oldAccount } = await supabase.from("bank_accounts").select("balance").eq("id", oldExpense.account_id).single();
-      if (oldAccount) {
-        await supabase.from("bank_accounts").update({ balance: oldAccount.balance + oldExpense.amount }).eq("id", oldExpense.account_id);
-      }
+        .eq("type", "expense"));
+      await updateBankBalanceByDelta(oldExpense.account_id, userId, Number(oldExpense.amount));
     }
 
     // Create new transaction if paid and has account
@@ -980,15 +998,12 @@ export const expensesApi = {
     const newCategory = input.category !== undefined ? input.category : oldExpense?.category;
 
     if (newIsPaid && newAccountId && newAmount) {
-      await supabase.from("transactions").insert([{
+      throwIfError(await supabase.from("transactions").insert([{
         user_id: userId, account_id: newAccountId, date: newDate,
         description: `Despesa: ${newDescription}`, amount: newAmount,
         type: "expense" as any, category: newCategory,
-      }]);
-      const { data: newAccount } = await supabase.from("bank_accounts").select("balance").eq("id", newAccountId).single();
-      if (newAccount) {
-        await supabase.from("bank_accounts").update({ balance: newAccount.balance - newAmount }).eq("id", newAccountId);
-      }
+      }]));
+      await updateBankBalanceByDelta(newAccountId, userId, -Number(newAmount));
     }
 
     return mapKeys(data);
@@ -999,17 +1014,12 @@ export const expensesApi = {
     const { data: expense } = await supabase.from("expenses").select("*").eq("id", input.id).eq("user_id", userId).single();
     
     if (expense && expense.is_paid && expense.account_id) {
-      // Delete transaction
-      await supabase.from("transactions").delete()
+      throwIfError(await supabase.from("transactions").delete()
         .eq("user_id", userId)
         .eq("account_id", expense.account_id)
         .like("description", `Despesa: ${expense.description}%`)
-        .eq("type", "expense");
-      // Restore balance
-      const { data: account } = await supabase.from("bank_accounts").select("balance").eq("id", expense.account_id).single();
-      if (account) {
-        await supabase.from("bank_accounts").update({ balance: account.balance + expense.amount }).eq("id", expense.account_id);
-      }
+        .eq("type", "expense"));
+      await updateBankBalanceByDelta(expense.account_id, userId, Number(expense.amount));
     }
     
     throwIfError(await supabase.from("expenses").delete().eq("id", input.id).eq("user_id", userId));
