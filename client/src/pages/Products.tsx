@@ -388,10 +388,19 @@ function KitsList() {
   const { data: kitItems = [] } = useQuery({ queryKey: ["kitItems", editingKit?.id], queryFn: () => productKitsApi.getItems({ kitId: editingKit?.id }), enabled: !!editingKit?.id });
 
   useEffect(() => {
-    if (editingKit?.id && kitItems.length > 0) {
-      setEditItems(kitItems.map((item: any) => ({ productId: item.productId, quantity: item.quantity, productName: item.productName || allProducts.find((p: any) => p.id === item.productId)?.name })));
+    if (!editingKit?.id) {
+      setEditItems([]);
+      return;
     }
-  }, [kitItems, editingKit?.id]);
+
+    setEditItems(
+      kitItems.map((item: any) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        productName: item.productName || allProducts.find((p: any) => p.id === item.productId)?.name,
+      }))
+    );
+  }, [allProducts, kitItems, editingKit?.id]);
 
   const sellKitMutation = useMutation({ mutationFn: productKitsApi.sellKit, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Kit vendido!"); }, onError: (e: any) => toast.error(e.message) });
   const deleteKitMutation = useMutation({ mutationFn: productKitsApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); toast.success("Kit excluído!"); }, onError: (e: any) => toast.error(e.message) });
