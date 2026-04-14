@@ -385,7 +385,12 @@ function KitsList() {
   const [newItemProductId, setNewItemProductId] = useState("");
   const [newItemQty, setNewItemQty] = useState(1);
 
-  const { data: kitItems = [] } = useQuery({ queryKey: ["kitItems", editingKit?.id], queryFn: () => productKitsApi.getItems({ kitId: editingKit?.id }), enabled: !!editingKit?.id });
+  const { data: kitItems = [], isError: kitItemsError } = useQuery({
+    queryKey: ["kitItems", editingKit?.id],
+    queryFn: () => productKitsApi.getItems({ kitId: editingKit!.id }),
+    enabled: !!editingKit?.id,
+    retry: 1,
+  });
 
   useEffect(() => {
     if (!editingKit?.id) {
@@ -393,13 +398,18 @@ function KitsList() {
       return;
     }
 
-    setEditItems(
-      kitItems.map((item: any) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        productName: item.productName || allProducts.find((p: any) => p.id === item.productId)?.name,
-      }))
-    );
+    try {
+      setEditItems(
+        (kitItems || []).map((item: any) => ({
+          productId: item.productId,
+          quantity: item.quantity || 1,
+          productName: item.productName || allProducts.find((p: any) => p.id === item.productId)?.name || `Produto #${item.productId}`,
+        }))
+      );
+    } catch (err) {
+      console.error("Erro ao carregar itens do kit:", err);
+      setEditItems([]);
+    }
   }, [allProducts, kitItems, editingKit?.id]);
 
   const sellKitMutation = useMutation({ mutationFn: productKitsApi.sellKit, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Kit vendido!"); }, onError: (e: any) => toast.error(e.message) });
