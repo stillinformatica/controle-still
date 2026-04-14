@@ -373,9 +373,9 @@ export const productKitsApi = {
       const { data: product } = await supabase.from("products").select("cost").eq("id", item.productId).single();
       if (product) totalCost += product.cost * item.quantity;
     }
-    const salePrice = parseFloat(input.salePrice);
+    const salePrice = parseFloat(input.salePrice) || 0;
     const profit = salePrice - totalCost;
-    const profitMargin = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+    const profitMargin = totalCost > 0 ? Math.min((profit / totalCost) * 100, 999999) : 0;
 
     const kit = throwIfError(
       await supabase.from("product_kits").insert({
@@ -394,16 +394,21 @@ export const productKitsApi = {
   },
   update: async (input: any) => {
     const userId = await getUserId();
+    const hasItems = input.items && input.items.length > 0;
     let totalCost = 0;
-    if (input.items) {
+    if (hasItems) {
       for (const item of input.items) {
         const { data: product } = await supabase.from("products").select("cost").eq("id", item.productId).single();
         if (product) totalCost += product.cost * item.quantity;
       }
+    } else {
+      // Keep existing total_cost
+      const { data: existing } = await supabase.from("product_kits").select("total_cost").eq("id", input.id).single();
+      if (existing) totalCost = Number(existing.total_cost) || 0;
     }
-    const salePrice = parseFloat(input.salePrice);
+    const salePrice = parseFloat(input.salePrice) || 0;
     const profit = salePrice - totalCost;
-    const profitMargin = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+    const profitMargin = totalCost > 0 ? Math.min((profit / totalCost) * 100, 999999) : 0;
 
     throwIfError(
       await supabase.from("product_kits").update({
@@ -414,7 +419,7 @@ export const productKitsApi = {
       }).eq("id", input.id).eq("user_id", userId)
     );
 
-    if (input.items) {
+    if (hasItems) {
       await supabase.from("product_kit_items").delete().eq("kit_id", input.id);
       for (const item of input.items) {
         await supabase.from("product_kit_items").insert({
