@@ -392,6 +392,8 @@ function KitsList() {
     retry: 1,
   });
 
+  const normalizedProducts = Array.isArray(allProducts) ? allProducts : [];
+
   useEffect(() => {
     if (!editingKit?.id) {
       setEditItems([]);
@@ -399,24 +401,63 @@ function KitsList() {
     }
 
     try {
+      const safeKitItems = Array.isArray(kitItems) ? kitItems : [];
       setEditItems(
-        (kitItems || []).map((item: any) => ({
-          productId: item.productId,
-          quantity: item.quantity || 1,
-          productName: item.productName || allProducts.find((p: any) => p.id === item.productId)?.name || `Produto #${item.productId}`,
-        }))
+        safeKitItems
+          .map((item: any) => ({
+            productId: Number(item?.productId),
+            quantity: Math.max(1, Number(item?.quantity) || 1),
+            productName: item?.productName || normalizedProducts.find((p: any) => p.id === Number(item?.productId))?.name || `Produto #${item?.productId}`,
+          }))
+          .filter((item) => Number.isFinite(item.productId) && item.productId > 0)
       );
     } catch (err) {
       console.error("Erro ao carregar itens do kit:", err);
       setEditItems([]);
     }
-  }, [allProducts, kitItems, editingKit?.id]);
+  }, [normalizedProducts, kitItems, editingKit?.id]);
 
   const sellKitMutation = useMutation({ mutationFn: productKitsApi.sellKit, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Kit vendido!"); }, onError: (e: any) => toast.error(e.message) });
   const deleteKitMutation = useMutation({ mutationFn: productKitsApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); toast.success("Kit excluído!"); }, onError: (e: any) => toast.error(e.message) });
   const updateKitMutation = useMutation({ mutationFn: productKitsApi.update, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); toast.success("Kit atualizado!"); setEditDialogOpen(false); setEditingKit(null); }, onError: (e: any) => toast.error(e.message) });
 
-  const handleEditClick = (kit: any) => { setEditingKit(kit); setEditForm({ name: kit.name, description: kit.description || "", salePrice: kit.salePrice, category: kit.category || "" }); setEditItems([]); setEditDialogOpen(true); };
+  const handleEditClick = (kit: any) => {
+    setEditingKit(kit);
+    setEditForm({
+      name: String(kit?.name || ""),
+      description: String(kit?.description || ""),
+      salePrice: kit?.salePrice != null ? String(kit.salePrice) : "",
+      category: typeof kit?.category === "string" && PRODUCT_CATEGORIES.includes(kit.category) ? kit.category : "",
+    });
+    setEditItems([]);
+    setNewItemProductId("");
+    setNewItemQty(1);
+    setEditDialogOpen(true);
+  };
+
+  const handleAddEditItem = () => {
+    if (!newItemProductId) return;
+
+    const pid = Number(newItemProductId);
+    if (!Number.isFinite(pid) || pid <= 0) return;
+
+    const quantity = Math.max(1, Number(newItemQty) || 1);
+    const product = normalizedProducts.find((p: any) => p.id === pid);
+
+    setEditItems((current) => {
+      const existing = current.find((item) => item.productId === pid);
+      if (existing) {
+        return current.map((item) =>
+          item.productId === pid ? { ...item, quantity: item.quantity + quantity } : item
+        );
+      }
+
+      return [...current, { productId: pid, quantity, productName: product?.name || `Produto #${pid}` }];
+    });
+
+    setNewItemProductId("");
+    setNewItemQty(1);
+  };
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingKit) return;
@@ -467,21 +508,22 @@ function KitsList() {
             <div><Label>Nome *</Label><Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required /></div>
             <div><Label>Descrição</Label><Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={2} /></div>
             <div><Label>Categoria</Label>
-              <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{PRODUCT_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
+              <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}>
+                <option value="">Selecione</option>
+                {PRODUCT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
             <div><Label>Preço de Venda *</Label><Input type="number" step="0.01" value={editForm.salePrice} onChange={(e) => setEditForm({ ...editForm, salePrice: e.target.value })} required /></div>
             <div className="space-y-2">
               <Label>Produtos</Label>
+              {kitItemsError && <p className="text-sm text-destructive">Não foi possível carregar os itens salvos do kit.</p>}
               <div className="flex gap-2">
                 <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={newItemProductId} onChange={(e) => setNewItemProductId(e.target.value)}>
                   <option value="">Selecione</option>
-                  {allProducts.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {normalizedProducts.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
                 <Input type="number" min="1" value={newItemQty} onChange={(e) => setNewItemQty(parseInt(e.target.value) || 1)} className="w-20" />
-                <Button type="button" onClick={() => { if (!newItemProductId) return; const pid = parseInt(newItemProductId); const product = allProducts.find((p: any) => p.id === pid); const existing = editItems.find(i => i.productId === pid); if (existing) setEditItems(editItems.map(i => i.productId === pid ? { ...i, quantity: i.quantity + newItemQty } : i)); else setEditItems([...editItems, { productId: pid, quantity: newItemQty, productName: product?.name }]); setNewItemProductId(""); setNewItemQty(1); }}>Adicionar</Button>
+                <Button type="button" onClick={handleAddEditItem}>Adicionar</Button>
               </div>
             </div>
             {editItems.length > 0 && (
