@@ -384,9 +384,14 @@ export const productKitsApi = {
     return mapKeys(data);
   },
   getItems: async (input: { kitId: number }) => {
-    const items = throwIfError(
-      await supabase.from("product_kit_items").select("*").eq("kit_id", input.kitId)
-    ) as Array<{ product_id: number | string }>;
+    if (!input.kitId) return [];
+
+    const result = await supabase.from("product_kit_items").select("*").eq("kit_id", input.kitId);
+    if (result.error) {
+      console.error("Erro ao buscar itens do kit:", result.error);
+      return [];
+    }
+    const items = result.data as Array<{ product_id: number | string }>;
 
     if (!items.length) return [];
 
