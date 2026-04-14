@@ -384,12 +384,24 @@ export const productKitsApi = {
     return mapKeys(data);
   },
   getItems: async (input: { kitId: number }) => {
-    const data = throwIfError(
-      await supabase.from("product_kit_items").select("*, products(name)").eq("kit_id", input.kitId)
+    const items = throwIfError(
+      await supabase.from("product_kit_items").select("*").eq("kit_id", input.kitId)
     );
-    return data.map((item: any) => ({
+
+    if (!items.length) return [];
+
+    const productIds = [...new Set(items.map((item: any) => item.product_id).filter(Boolean))];
+    const products = productIds.length
+      ? throwIfError(
+          await supabase.from("products").select("id, name").in("id", productIds)
+        )
+      : [];
+
+    const productNameById = new Map(products.map((product: any) => [product.id, product.name]));
+
+    return items.map((item: any) => ({
       ...mapKeys(item),
-      productName: item.products?.name || `Produto #${item.product_id}`,
+      productName: productNameById.get(item.product_id) || `Produto #${item.product_id}`,
     }));
   },
   create: async (input: any) => {
