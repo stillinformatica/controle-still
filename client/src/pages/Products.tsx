@@ -387,13 +387,10 @@ function KitsList() {
 
   const { data: kitItems = [] } = useQuery({ queryKey: ["kitItems", editingKit?.id], queryFn: () => productKitsApi.getItems({ kitId: editingKit?.id }), enabled: !!editingKit?.id });
 
-  const prevKitIdRef = useRef<number | null>(null);
   useEffect(() => {
-    if (editingKit?.id && kitItems.length > 0 && prevKitIdRef.current !== editingKit.id) {
-      prevKitIdRef.current = editingKit.id;
+    if (editingKit?.id && kitItems.length > 0) {
       setEditItems(kitItems.map((item: any) => ({ productId: item.productId, quantity: item.quantity, productName: item.productName || allProducts.find((p: any) => p.id === item.productId)?.name })));
     }
-    if (!editingKit) prevKitIdRef.current = null;
   }, [kitItems, editingKit?.id]);
 
   const sellKitMutation = useMutation({ mutationFn: productKitsApi.sellKit, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["productKits"] }); queryClient.invalidateQueries({ queryKey: ["products"] }); toast.success("Kit vendido!"); }, onError: (e: any) => toast.error(e.message) });
@@ -411,7 +408,7 @@ function KitsList() {
       description: editForm.description,
       salePrice: editForm.salePrice,
       category: editForm.category,
-      ...(editItems.length > 0 ? { items: editItems.map(i => ({ productId: i.productId, quantity: i.quantity })) } : {}),
+      items: editItems.map(i => ({ productId: i.productId, quantity: i.quantity })),
     });
   };
 
