@@ -391,7 +391,9 @@ export const productKitsApi = {
       console.error("Erro ao buscar itens do kit:", result.error);
       return [];
     }
-    const items = result.data as Array<{ product_id: number | string }>;
+    const items = Array.isArray(result.data)
+      ? (result.data as Array<{ product_id: number | string; quantity?: number | null }>)
+      : [];
 
     if (!items.length) return [];
 
@@ -410,6 +412,8 @@ export const productKitsApi = {
 
     return items.map((item: any) => ({
       ...mapKeys(item),
+      productId: Number(item.product_id),
+      quantity: Number(item.quantity) || 1,
       productName: productNameById.get(item.product_id) || `Produto #${item.product_id}`,
     }));
   },
