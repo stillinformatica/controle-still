@@ -290,7 +290,31 @@ export default function Services() {
                           <span className="font-medium">{group.name}</span>
                           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{group.items.length} OS</span>
                         </div>
-                        <span className="font-semibold tabular-nums text-blue-600">{formatCurrency(group.totalAmount)}</span>
+                        <div className="flex items-center gap-2">
+                          <PrintDocument
+                            type="service"
+                            title={`OS - ${group.name}`}
+                            documentNumber={group.items[0]?.osNumber || undefined}
+                            date={group.items.length > 0 ? formatDate(group.items[0].date) : "-"}
+                            customerName={group.name}
+                            items={group.items.map((s: any) => ({
+                              description: s.description,
+                              totalPrice: parseFloat(s.amount || "0"),
+                              extra: {
+                                serialNumber: s.serialNumber || "-",
+                                storageLocation: s.storageLocation || "-",
+                                serviceType: serviceTypeLabels[s.serviceType || "pending"],
+                              },
+                            }))}
+                            totalAmount={group.totalAmount}
+                            extraColumns={[
+                              { key: "serialNumber", label: "Nº Série" },
+                              { key: "storageLocation", label: "Armazenamento" },
+                              { key: "serviceType", label: "Status" },
+                            ]}
+                          />
+                          <span className="font-semibold tabular-nums text-blue-600">{formatCurrency(group.totalAmount)}</span>
+                        </div>
                       </div>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
