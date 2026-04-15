@@ -369,6 +369,17 @@ export default function Sales() {
                           </div>
                         </div>
                         <div className="flex shrink-0 gap-1">
+                          <PrintDocument
+                            type="sale"
+                            title={`Venda - ${sale.customerName || "Cliente"}`}
+                            date={formatDate(sale.date)}
+                            customerName={sale.customerName || undefined}
+                            items={[{
+                              description: sale.description,
+                              totalPrice: sale.amount,
+                            }]}
+                            totalAmount={sale.amount}
+                          />
                           <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(sale)}>
                             <Pencil className="h-4 w-4 text-muted-foreground" />
                           </Button>
@@ -414,6 +425,17 @@ export default function Sales() {
                           <TableCell className="text-right tabular-nums font-semibold text-green-600">{formatCurrency(sale.profit)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
+                              <PrintDocument
+                                type="sale"
+                                title={`Venda - ${sale.customerName || "Cliente"}`}
+                                date={formatDate(sale.date)}
+                                customerName={sale.customerName || undefined}
+                                items={[{
+                                  description: sale.description,
+                                  totalPrice: sale.amount,
+                                }]}
+                                totalAmount={sale.amount}
+                              />
                               <Button variant="ghost" size="icon" onClick={() => handleEdit(sale)}>
                                 <Pencil className="h-4 w-4 text-muted-foreground" />
                               </Button>
