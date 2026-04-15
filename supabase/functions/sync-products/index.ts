@@ -1,5 +1,4 @@
 import { z } from "npm:zod@3.23.8";
-import { createClient } from "npm:@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,7 +50,7 @@ Deno.serve(async (req) => {
             Authorization: `Bearer ${targetAnonKey}`,
           },
           body: JSON.stringify({
-            id: product.id,
+            source_id: product.id,
             name: product.name,
             description: product.description,
             category: product.category,
