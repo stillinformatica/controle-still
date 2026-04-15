@@ -32,7 +32,8 @@ import {
 import { salesApi, bankAccountsApi, productsApi, productKitsApi } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, ShoppingCart, Trash2, X, Pencil } from "lucide-react";
+import { Plus, ShoppingCart, Trash2, X, Pencil, Printer } from "lucide-react";
+import { PrintDocument, type PrintDocumentItem } from "@/components/PrintDocument";
 import { toast } from "sonner";
 import { getCurrentDateString } from "@/../../shared/timezone";
 

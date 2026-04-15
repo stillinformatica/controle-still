@@ -17,7 +17,8 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { servicesApi, bankAccountsApi } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Wrench, Trash2, Edit, ChevronDown, ChevronRight, User, Search } from "lucide-react";
+import { Plus, Wrench, Trash2, Edit, ChevronDown, ChevronRight, User, Search, Printer } from "lucide-react";
+import { PrintDocument, type PrintDocumentItem } from "@/components/PrintDocument";
 import { toast } from "sonner";
 import { getCurrentDateString } from "@/../../shared/timezone";
 
