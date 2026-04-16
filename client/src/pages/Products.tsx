@@ -157,7 +157,7 @@ export default function Products() {
                     <div className="hidden md:block overflow-x-auto w-full">
                       <Table className="w-full min-w-[700px]">
                         <TableHeader><TableRow>
-                          <TableHead>Produto</TableHead><TableHead className="text-right">Custo</TableHead><TableHead className="text-right">Preço Venda</TableHead>
+                          <TableHead className="max-w-[280px]">Produto</TableHead><TableHead className="text-right w-[100px]">Custo</TableHead><TableHead className="text-right w-[100px]">Preço Venda</TableHead>
                           <TableHead className="text-right">Qtd</TableHead><TableHead className="text-right">Lucro</TableHead><TableHead className="text-right">Margem</TableHead><TableHead className="text-right">Ações</TableHead>
                         </TableRow></TableHeader>
                         <TableBody>
@@ -166,7 +166,7 @@ export default function Products() {
                             const margin = calculateMargin(product.cost, product.salePrice);
                             return (
                               <TableRow key={product.id}>
-                                <TableCell className="font-medium"><div><span className="block truncate" title={product.name}>{product.name}</span>{product.category && <span className="text-xs text-primary font-medium">{product.category}</span>}{product.description && <p className="text-xs text-muted-foreground truncate">{product.description}</p>}</div></TableCell>
+                                <TableCell className="font-medium max-w-[280px]"><div><span className="block truncate" title={product.name}>{product.name}</span>{product.category && <span className="text-xs text-primary font-medium">{product.category}</span>}{product.description && <p className="text-xs text-muted-foreground truncate">{product.description}</p>}</div></TableCell>
                                 <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.cost)}</TableCell>
                                 <TableCell className="text-right tabular-nums text-sm">{formatCurrency(product.salePrice)}</TableCell>
                                 <TableCell className="text-right tabular-nums"><span className={`font-semibold ${product.minimumStock > 0 && product.quantity <= product.minimumStock ? "text-amber-600" : ""}`}>{product.quantity || 0}{product.minimumStock > 0 && product.quantity <= product.minimumStock && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />}</span></TableCell>
