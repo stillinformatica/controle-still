@@ -1,55 +1,54 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "light" | "dark";
+export const THEMES = {
+  light: { label: "Claro", emoji: "☀️" },
+  dark: { label: "Escuro", emoji: "🌙" },
+  mothers_day: { label: "Dia das Mães", emoji: "💐" },
+  harry_potter: { label: "Harry Potter", emoji: "⚡" },
+  marvel: { label: "Marvel", emoji: "🦸" },
+  christmas: { label: "Natal", emoji: "🎄" },
+} as const;
+
+export type ThemeName = keyof typeof THEMES;
 
 interface ThemeContextType {
-  theme: Theme;
-  toggleTheme?: () => void;
-  switchable: boolean;
+  theme: ThemeName;
+  setTheme: (theme: ThemeName) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-interface ThemeProviderProps {
-  children: React.ReactNode;
-  defaultTheme?: Theme;
-  switchable?: boolean;
-}
-
 export function ThemeProvider({
   children,
   defaultTheme = "light",
-  switchable = false,
-}: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (switchable) {
-      const stored = localStorage.getItem("theme");
-      return (stored as Theme) || defaultTheme;
-    }
-    return defaultTheme;
+}: {
+  children: React.ReactNode;
+  defaultTheme?: ThemeName;
+}) {
+  const [theme, setThemeState] = useState<ThemeName>(() => {
+    const stored = localStorage.getItem("app-theme") as ThemeName | null;
+    return stored && stored in THEMES ? stored : defaultTheme;
   });
 
   useEffect(() => {
     const root = document.documentElement;
+    // Remove all theme classes
+    Object.keys(THEMES).forEach((t) => root.classList.remove(`theme-${t}`));
+    root.classList.remove("dark");
+
     if (theme === "dark") {
       root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
+    } else if (theme !== "light") {
+      root.classList.add(`theme-${theme}`);
     }
 
-    if (switchable) {
-      localStorage.setItem("theme", theme);
-    }
-  }, [theme, switchable]);
+    localStorage.setItem("app-theme", theme);
+  }, [theme]);
 
-  const toggleTheme = switchable
-    ? () => {
-        setTheme(prev => (prev === "light" ? "dark" : "light"));
-      }
-    : undefined;
+  const setTheme = (t: ThemeName) => setThemeState(t);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, switchable }}>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );
