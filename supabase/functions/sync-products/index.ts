@@ -28,6 +28,7 @@ const ProductSchema = z.object({
 
 const BodySchema = z.object({
   products: z.array(ProductSchema),
+  cleanupMissing: z.boolean().optional().default(true),
 });
 
 function jsonResponse(body: unknown, status = 200) {
@@ -136,7 +137,7 @@ export async function handleSyncProducts(req: Request) {
       return jsonResponse({ error: "Dados inválidos", details: parsed.error.flatten().fieldErrors }, 400);
     }
 
-    const { products } = parsed.data;
+    const { products, cleanupMissing } = parsed.data;
     const results: SyncResult[] = [];
     const targetAnonKey = Deno.env.get("TARGET_SITE_ANON_KEY") || "";
 
@@ -148,9 +149,11 @@ export async function handleSyncProducts(req: Request) {
       results.push(await syncSingleProduct(targetAnonKey, product));
     }
 
-    const sourceIds = [...new Set(products.map((product) => product.id).filter((id) => Number.isFinite(id)))];
-    const cleanupResult = await cleanupMissingProducts(targetAnonKey, sourceIds);
-    results.push(cleanupResult);
+    if (cleanupMissing) {
+      const sourceIds = [...new Set(products.map((product) => product.id).filter((id) => Number.isFinite(id)))];
+      const cleanupResult = await cleanupMissingProducts(targetAnonKey, sourceIds);
+      results.push(cleanupResult);
+    }
 
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;

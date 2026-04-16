@@ -80,3 +80,57 @@ Deno.test("sincroniza produtos e executa limpeza de ausentes", async () => {
     Deno.env.get = originalEnvGet;
   }
 });
+
+Deno.test("não executa limpeza quando cleanupMissing for false", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalEnvGet = Deno.env.get;
+
+  Deno.env.get = (key: string) => {
+    if (key === "TARGET_SITE_ANON_KEY") return "test-key";
+    return originalEnvGet.call(Deno.env, key);
+  };
+
+  const urls: string[] = [];
+  globalThis.fetch = async (input: string | URL | Request) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    urls.push(url);
+
+    return new Response(JSON.stringify({ action: "updated" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+
+  try {
+    const response = await handleSyncProducts(
+      new Request("http://localhost/sync-products", {
+        method: "POST",
+        body: JSON.stringify({
+          cleanupMissing: false,
+          products: [
+            {
+              id: 11,
+              name: "Produto 2",
+              description: "Desc",
+              category: "Teste",
+              price: 50,
+              quantity: 1,
+              images: [],
+              isTesting: false,
+            },
+          ],
+        }),
+      }),
+    );
+
+    const result = await response.json();
+
+    assertEquals(response.status, 200);
+    assertEquals(urls.length, 1);
+    assertEquals(urls[0].endsWith("/receive-product"), true);
+    assertEquals(result.results.length, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    Deno.env.get = originalEnvGet;
+  }
+});
