@@ -833,12 +833,14 @@ function AnnounceDialog({ product, onClose }: { product: any; onClose: () => voi
 }
 
 function SyncDialog({ products, onClose }: { products: any[]; onClose: () => void }) {
+  const BATCH_SIZE = 20;
   const [syncing, setSyncing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [results, setResults] = useState<{ id: number; name: string; success: boolean; error?: string }[] | null>(null);
+  const [results, setResults] = useState<{ id: number; name: string; success: boolean; error?: string; action?: string }[] | null>(null);
 
   const handleSync = async () => {
     setSyncing(true);
+    setResults(null);
     setProgress(10);
 
     try {
@@ -875,28 +877,41 @@ function SyncDialog({ products, onClose }: { products: any[]; onClose: () => voi
       setProgress(40);
 
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/sync-products`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ products: productsWithImages }),
-        }
-      );
+      const totalBatches = Math.ceil(productsWithImages.length / BATCH_SIZE);
+      const allResults: { id: number; name: string; success: boolean; error?: string; action?: string }[] = [];
 
-      setProgress(90);
-      const result = await response.json();
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
+        const batch = productsWithImages.slice(batchIndex * BATCH_SIZE, (batchIndex + 1) * BATCH_SIZE);
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/sync-products`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({
+              products: batch,
+              cleanupMissing: batchIndex === totalBatches - 1,
+            }),
+          }
+        );
 
-      if (!response.ok) throw new Error(result.error || "Erro na sincronização");
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || `Erro no lote ${batchIndex + 1}`);
 
-      setResults(result.results || []);
+        allResults.push(...(result.results || []));
+        setResults([...allResults]);
+
+        const progressValue = 40 + Math.round(((batchIndex + 1) / totalBatches) * 50);
+        setProgress(progressValue);
+      }
+
+      setResults(allResults);
       setProgress(100);
 
-      const successCount = (result.results || []).filter((r: any) => r.success).length;
-      const failCount = (result.results || []).filter((r: any) => !r.success).length;
+      const successCount = allResults.filter((r: any) => r.success).length;
+      const failCount = allResults.filter((r: any) => !r.success).length;
 
       if (failCount === 0) {
         toast.success(`${successCount} produto(s) sincronizado(s) com sucesso!`);
