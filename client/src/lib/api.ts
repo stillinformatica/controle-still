@@ -264,7 +264,7 @@ export const productsApi = {
     const profit = salePrice - cost;
     const profitMargin = salePrice > 0 ? (profit / salePrice) * 100 : 0;
     const data = throwIfError(
-      await supabase.from("products").insert({
+      await (supabase.from("products") as any).insert({
         user_id: userId, name: input.name, description: input.description || null,
         category: input.category || null, cost, sale_price: salePrice, profit, profit_margin: profitMargin,
         quantity: parseInt(input.quantity) || 0, minimum_stock: parseInt(input.minimumStock) || 0,
@@ -430,7 +430,7 @@ export const productKitsApi = {
     const profitMargin = totalCost > 0 ? clampProfitMargin((profit / totalCost) * 100) : 0;
 
     const kit = throwIfError(
-      await supabase.from("product_kits").insert({
+      await (supabase.from("product_kits") as any).insert({
         user_id: userId, name: input.name, description: input.description || null,
         sale_price: salePrice, total_cost: totalCost, profit, profit_margin: profitMargin,
         category: input.category || null,
@@ -463,7 +463,7 @@ export const productKitsApi = {
     const profitMargin = totalCost > 0 ? clampProfitMargin((profit / totalCost) * 100) : 0;
 
     throwIfError(
-      await supabase.from("product_kits").update({
+      await (supabase.from("product_kits") as any).update({
         name: input.name, description: input.description || null,
         sale_price: salePrice, total_cost: totalCost, profit, profit_margin: profitMargin,
         category: input.category || null,
