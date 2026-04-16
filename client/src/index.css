@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant mothers-day (&:is(.theme-mothers_day *));
+@custom-variant harry-potter (&:is(.theme-harry_potter *));
+@custom-variant marvel (&:is(.theme-marvel *));
+@custom-variant christmas (&:is(.theme-christmas *));
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
