@@ -261,31 +261,46 @@
   --chart-5: oklch(0.60 0.10 340);
 }
 
-/* Theme decorative backgrounds with custom icons */
-
-/* 💐 Dia das Mães - Corações, flores e borboletas */
-.theme-mothers_day {
-  background-image: url("data:image/svg+xml,%3Csvg width='140' height='140' viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e879a0' fill-opacity='0.10'%3E%3Cpath d='M30 25c-3.5 0-6.5 3-6.5 6.5 0 5 6.5 11 6.5 11s6.5-6 6.5-11C36.5 28 33.5 25 30 25z'/%3E%3Cpath d='M105 95c-3.5 0-6.5 3-6.5 6.5 0 5 6.5 11 6.5 11s6.5-6 6.5-11C111.5 98 108.5 95 105 95z'/%3E%3Cg transform='translate(85 30)'%3E%3Ccircle cx='0' cy='-5' r='4'/%3E%3Ccircle cx='5' cy='0' r='4'/%3E%3Ccircle cx='0' cy='5' r='4'/%3E%3Ccircle cx='-5' cy='0' r='4'/%3E%3Ccircle cx='0' cy='0' r='2.5' fill='%23f4a8c0'/%3E%3C/g%3E%3Cg transform='translate(25 100)'%3E%3Ccircle cx='0' cy='-4' r='3.5'/%3E%3Ccircle cx='4' cy='0' r='3.5'/%3E%3Ccircle cx='0' cy='4' r='3.5'/%3E%3Ccircle cx='-4' cy='0' r='3.5'/%3E%3C/g%3E%3Cpath d='M65 65c-2 0-3 1-3 2.5 0 3 3 6 3 6s3-3 3-6c0-1.5-1-2.5-3-2.5zM60 60c-1 0-2 1-2 2 0 2 2 4 2 4s2-2 2-4c0-1-1-2-2-2zM70 60c-1 0-2 1-2 2 0 2 2 4 2 4s2-2 2-4c0-1-1-2-2-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-
-/* ⚡ Harry Potter - Raios, varinhas, chapéus e estrelas */
-.theme-harry_potter {
-  background-image: url("data:image/svg+xml,%3Csvg width='160' height='160' viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4af37' fill-opacity='0.12'%3E%3Cpath d='M30 20l-8 18h6l-4 14 12-20h-6l4-12z'/%3E%3Cpath d='M120 100l-8 18h6l-4 14 12-20h-6l4-12z'/%3E%3Cg transform='translate(110 30)'%3E%3Cpath d='M0 0l2 5 5 1-4 3 1 5-4-3-4 3 1-5-4-3 5-1z'/%3E%3C/g%3E%3Cg transform='translate(35 110)'%3E%3Cpath d='M0 0l1.5 4 4 .8-3 2.4.8 4-3.3-2.3-3.3 2.3.8-4-3-2.4 4-.8z'/%3E%3C/g%3E%3Cg transform='translate(80 60)'%3E%3Cpath d='M-15 8 L15 -8' stroke='%23d4af37' stroke-width='1.5' stroke-opacity='0.5' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='-8' r='2'/%3E%3C/g%3E%3Cpath d='M85 130c0-2 2-4 5-4h10c3 0 5 2 5 4v2H85v-2zm3-2c0-8 4-15 7-15s7 7 7 15h-14z'/%3E%3Ccircle cx='140' cy='80' r='1.5'/%3E%3Ccircle cx='20' cy='75' r='1.2'/%3E%3Ccircle cx='75' cy='25' r='1.3'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-
-/* 🦸 Marvel - Estrelas, raios e símbolos heroicos */
-.theme-marvel {
-  background-image: url("data:image/svg+xml,%3Csvg width='160' height='160' viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ff4444' fill-opacity='0.10'%3E%3Cg transform='translate(40 40)'%3E%3Ccircle r='14' fill='none' stroke='%23ff4444' stroke-width='2' stroke-opacity='0.5'/%3E%3Ccircle r='9' fill='none' stroke='%234a90e2' stroke-width='2' stroke-opacity='0.4'/%3E%3Ccircle r='4' fill='%23ff4444' fill-opacity='0.3'/%3E%3C/g%3E%3Cg transform='translate(120 110)'%3E%3Cpath d='M0 -12l3 8 8 1-6 5 2 9-7-5-7 5 2-9-6-5 8-1z'/%3E%3C/g%3E%3Cg transform='translate(110 30)' fill='%234a90e2' fill-opacity='0.5'%3E%3Cpath d='M-5 -10l-3 11h6l-4 12 11-15h-6l3-8z'/%3E%3C/g%3E%3Cg transform='translate(30 120)'%3E%3Cpath d='M0 -8l2 5 5 1-4 3 1 5-4-3-4 3 1-5-4-3 5-1z'/%3E%3C/g%3E%3Ccircle cx='80' cy='80' r='2'/%3E%3Ccircle cx='140' cy='70' r='1.5'/%3E%3Ccircle cx='20' cy='75' r='1.5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-
-/* 🎄 Natal - Árvores, flocos de neve, presentes e estrelas */
-.theme-christmas {
-  background-image: url("data:image/svg+xml,%3Csvg width='160' height='160' viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill-opacity='0.10'%3E%3Cg transform='translate(35 30)' fill='%23228b22'%3E%3Cpath d='M0 -15l7 10h-3l5 8h-3l5 8h-22l5-8h-3l5-8h-3z'/%3E%3Crect x='-2' y='11' width='4' height='4' fill='%238b4513'/%3E%3C/g%3E%3Cg transform='translate(125 110)' fill='%23228b22'%3E%3Cpath d='M0 -15l7 10h-3l5 8h-3l5 8h-22l5-8h-3l5-8h-3z'/%3E%3Crect x='-2' y='11' width='4' height='4' fill='%238b4513'/%3E%3C/g%3E%3Cg transform='translate(110 35)' fill='%23dc143c'%3E%3Cpath d='M-15 -10l30 0 0 25 -30 0z' fill-opacity='0.6'/%3E%3Cpath d='M-15 -3l30 0' stroke='%23ffd700' stroke-width='1.5' stroke-opacity='0.8'/%3E%3Cpath d='M0 -10l0 25' stroke='%23ffd700' stroke-width='1.5' stroke-opacity='0.8'/%3E%3C/g%3E%3Cg transform='translate(30 115)' fill='%23dc143c'%3E%3Ccircle r='8'/%3E%3Cpath d='M-8 0 L8 0 M0 -8 L0 8 M-5.5 -5.5 L5.5 5.5 M-5.5 5.5 L5.5 -5.5' stroke='%23ffffff' stroke-width='1' stroke-opacity='0.6'/%3E%3C/g%3E%3Cg transform='translate(80 75)' fill='%234a90e2'%3E%3Cpath d='M-6 0 L6 0 M0 -6 L0 6 M-4 -4 L4 4 M-4 4 L4 -4' stroke='%234a90e2' stroke-width='1.5'/%3E%3C/g%3E%3Cg transform='translate(140 75)' fill='%23ffd700'%3E%3Cpath d='M0 -6l1.5 4 4 0-3 2.5 1 4-3.5-2.5-3.5 2.5 1-4-3-2.5 4 0z'/%3E%3C/g%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-
-/* 🌙 Dark - Estrelas e luas */
+/* Theme decorative backgrounds - photographic wallpapers */
+.theme-mothers_day,
+.theme-harry_potter,
+.theme-marvel,
+.theme-christmas,
 .dark {
-  background-image: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cg transform='translate(30 30)'%3E%3Cpath d='M0 -5l1.5 3 3 .5-2 2 .5 3-3-1.5-3 1.5.5-3-2-2 3-.5z'/%3E%3C/g%3E%3Cg transform='translate(95 80)'%3E%3Cpath d='M0 -4l1 2.5 2.5.5-2 1.5.5 2.5-2-1.2-2 1.2.5-2.5-2-1.5 2.5-.5z'/%3E%3C/g%3E%3Cg transform='translate(90 25)'%3E%3Cpath d='M3 -3a4 4 0 1 0 0 6 5 5 0 1 1 0-6z'/%3E%3C/g%3E%3Ccircle cx='60' cy='60' r='1.2'/%3E%3Ccircle cx='15' cy='90' r='1'/%3E%3Ccircle cx='105' cy='105' r='0.8'/%3E%3Ccircle cx='75' cy='15' r='0.8'/%3E%3Ccircle cx='45' cy='100' r='0.6'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.theme-mothers_day {
+  background-image:
+    linear-gradient(hsl(var(--background) / 0.85), hsl(var(--background) / 0.85)),
+    url("/src/assets/bg-mothers-day.jpg");
+}
+
+.theme-harry_potter {
+  background-image:
+    linear-gradient(hsl(var(--background) / 0.88), hsl(var(--background) / 0.88)),
+    url("/src/assets/bg-harry-potter.jpg");
+}
+
+.theme-marvel {
+  background-image:
+    linear-gradient(hsl(var(--background) / 0.88), hsl(var(--background) / 0.88)),
+    url("/src/assets/bg-marvel.jpg");
+}
+
+.theme-christmas {
+  background-image:
+    linear-gradient(hsl(var(--background) / 0.85), hsl(var(--background) / 0.85)),
+    url("/src/assets/bg-christmas.jpg");
+}
+
+.dark {
+  background-image:
+    linear-gradient(hsl(var(--background) / 0.90), hsl(var(--background) / 0.90)),
+    url("/src/assets/bg-dark.jpg");
 }
 
 @layer base {
