@@ -158,7 +158,7 @@ export default function Products() {
                       <Table className="w-full min-w-[700px] table-fixed">
                         <TableHeader><TableRow>
                           <TableHead className="max-w-[280px]">Produto</TableHead><TableHead className="text-right w-[100px]">Custo</TableHead><TableHead className="text-right w-[100px]">Preço Venda</TableHead>
-                          <TableHead className="text-right">Qtd</TableHead><TableHead className="text-right">Lucro</TableHead><TableHead className="text-right">Margem</TableHead><TableHead className="text-right">Ações</TableHead>
+                          <TableHead className="text-right w-[60px]">Qtd</TableHead><TableHead className="text-right w-[90px]">Lucro</TableHead><TableHead className="text-right w-[70px]">Margem</TableHead><TableHead className="text-right w-[140px]">Ações</TableHead>
                         </TableRow></TableHeader>
                         <TableBody>
                           {regularProducts.map((product: any) => {
