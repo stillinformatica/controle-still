@@ -47,6 +47,7 @@
 }
 
 :root {
+  --theme-overlay: transparent;
   --primary: oklch(0.35 0.12 250);
   --primary-foreground: oklch(0.98 0 0);
   --sidebar-primary: var(--color-blue-600);
@@ -83,6 +84,7 @@
 }
 
 .dark {
+  --theme-overlay: oklch(0.141 0.005 285.823 / 0.90);
   --primary: oklch(0.35 0.12 250);
   --primary-foreground: oklch(0.98 0 0);
   --sidebar-primary: var(--color-blue-500);
@@ -119,6 +121,7 @@
 
 /* 💐 Dia das Mães - Rosa e tons florais */
 .theme-mothers_day {
+  --theme-overlay: oklch(0.97 0.01 350 / 0.85);
   --primary: oklch(0.55 0.2 350);
   --primary-foreground: oklch(0.98 0 0);
   --background: oklch(0.97 0.01 350);
@@ -155,6 +158,7 @@
 
 /* ⚡ Harry Potter - Dourado e bordô */
 .theme-harry_potter {
+  --theme-overlay: oklch(0.18 0.01 60 / 0.88);
   --primary: oklch(0.55 0.14 75);
   --primary-foreground: oklch(0.98 0 0);
   --background: oklch(0.18 0.01 60);
@@ -191,6 +195,7 @@
 
 /* 🦸 Marvel - Vermelho e azul */
 .theme-marvel {
+  --theme-overlay: oklch(0.14 0.01 260 / 0.88);
   --primary: oklch(0.5 0.22 25);
   --primary-foreground: oklch(0.98 0 0);
   --background: oklch(0.14 0.01 260);
@@ -227,6 +232,7 @@
 
 /* 🎄 Natal - Verde e vermelho */
 .theme-christmas {
+  --theme-overlay: oklch(0.96 0.008 150 / 0.85);
   --primary: oklch(0.45 0.15 150);
   --primary-foreground: oklch(0.98 0 0);
   --background: oklch(0.96 0.008 150);
@@ -262,45 +268,45 @@
 }
 
 /* Theme decorative backgrounds - photographic wallpapers */
-.theme-mothers_day,
-.theme-harry_potter,
-.theme-marvel,
-.theme-christmas,
-.dark {
+.theme-mothers_day body,
+.theme-harry_potter body,
+.theme-marvel body,
+.theme-christmas body,
+.dark body {
   background-attachment: fixed;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
-.theme-mothers_day {
+.theme-mothers_day body {
   background-image:
-    linear-gradient(hsl(var(--background) / 0.85), hsl(var(--background) / 0.85)),
-    url("/src/assets/bg-mothers-day.jpg");
+    linear-gradient(var(--theme-overlay), var(--theme-overlay)),
+    url("./assets/bg-mothers-day.jpg");
 }
 
-.theme-harry_potter {
+.theme-harry_potter body {
   background-image:
-    linear-gradient(hsl(var(--background) / 0.88), hsl(var(--background) / 0.88)),
-    url("/src/assets/bg-harry-potter.jpg");
+    linear-gradient(var(--theme-overlay), var(--theme-overlay)),
+    url("./assets/bg-harry-potter.jpg");
 }
 
-.theme-marvel {
+.theme-marvel body {
   background-image:
-    linear-gradient(hsl(var(--background) / 0.88), hsl(var(--background) / 0.88)),
-    url("/src/assets/bg-marvel.jpg");
+    linear-gradient(var(--theme-overlay), var(--theme-overlay)),
+    url("./assets/bg-marvel.jpg");
 }
 
-.theme-christmas {
+.theme-christmas body {
   background-image:
-    linear-gradient(hsl(var(--background) / 0.85), hsl(var(--background) / 0.85)),
-    url("/src/assets/bg-christmas.jpg");
+    linear-gradient(var(--theme-overlay), var(--theme-overlay)),
+    url("./assets/bg-christmas.jpg");
 }
 
-.dark {
+.dark body {
   background-image:
-    linear-gradient(hsl(var(--background) / 0.90), hsl(var(--background) / 0.90)),
-    url("/src/assets/bg-dark.jpg");
+    linear-gradient(var(--theme-overlay), var(--theme-overlay)),
+    url("./assets/bg-dark.jpg");
 }
 
 @layer base {
@@ -309,6 +315,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    min-height: 100vh;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
