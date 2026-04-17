@@ -27,6 +27,7 @@ export function useAuth() {
       (_event, session) => {
         if (!isMounted) return;
         setSupabaseUser(session?.user ?? null);
+        setIsSessionReady(true);
       }
     );
 
