@@ -7,9 +7,14 @@ import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 
 export async function setupVite(app: Express, server: Server) {
+  const resolvedServerConfig = viteConfig.server ?? {};
   const serverOptions = {
+    ...resolvedServerConfig,
     middlewareMode: true,
-    hmr: { server },
+    hmr: {
+      ...(typeof resolvedServerConfig === "object" ? resolvedServerConfig.hmr : {}),
+      server,
+    },
     allowedHosts: true as const,
   };
 
