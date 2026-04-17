@@ -31,11 +31,25 @@ export function useAuth() {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isMounted) return;
-      setSupabaseUser(session?.user ?? null);
-      setIsSessionReady(true);
-    });
+    void (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!isMounted) return;
+        setSupabaseUser(session?.user ?? null);
+      } catch (error) {
+        console.error("[Auth] Failed to restore session:", error);
+
+        if (!isMounted) return;
+        setSupabaseUser(null);
+      } finally {
+        if (isMounted) {
+          setIsSessionReady(true);
+        }
+      }
+    })();
 
     return () => {
       isMounted = false;
