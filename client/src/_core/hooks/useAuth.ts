@@ -51,6 +51,7 @@ export function useAuth() {
   });
 
   const resolvedUser = profile ?? (supabaseUser ? mapSupabaseUserToFallbackProfile(supabaseUser) : null);
+  const user = isSessionReady ? resolvedUser : null;
   const loading = !isSessionReady || (!!supabaseUser && isProfileLoading);
 
   const logout = useCallback(async () => {
@@ -69,7 +70,7 @@ export function useAuth() {
   }, []);
 
   return {
-    user: resolvedUser,
+    user,
     supabaseUser,
     loading,
     isSessionReady,
