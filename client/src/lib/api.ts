@@ -1354,21 +1354,29 @@ export const dashboardApi = {
       supabase.from("expenses").select("amount, category").eq("user_id", userId).gte("date", monthStart).lte("date", monthEnd),
     ]);
 
+    for (const [name, res] of Object.entries({ accountsRes, investmentsRes, debtorsRes, salesRes, servicesRes, expensesRes })) {
+      if ((res as any).error) console.error(`[dashboard.stats] ${name} error:`, (res as any).error);
+    }
+
     const marketplaceKeywords = ["shopee", "mercado livre", "mercadolivre", "mercado pago"];
-    const isMarketplace = (name: string) => marketplaceKeywords.some(kw => name.toLowerCase().includes(kw));
+    const isMarketplace = (name: string | null) => !!name && marketplaceKeywords.some(kw => name.toLowerCase().includes(kw));
+    const num = (v: unknown) => Number(v) || 0;
     const allAccounts = accountsRes.data || [];
-    const businessAccounts = allAccounts.filter(a => !isMarketplace(a.name));
-    const marketplaceAccounts = allAccounts.filter(a => isMarketplace(a.name));
-    const totalBalance = businessAccounts.reduce((s, a) => s + a.balance, 0);
-    const totalMarketplace = marketplaceAccounts.reduce((s, a) => s + a.balance, 0);
-    const totalInvestments = (investmentsRes.data || []).reduce((s, i) => s + i.shares * (i.current_price || i.purchase_price), 0);
-    const totalDebtors = (debtorsRes.data || []).reduce((s, d) => s + d.remaining_amount, 0) + totalMarketplace;
-    const monthSales = (salesRes.data || []).reduce((s, sale) => s + sale.amount, 0);
-    const monthServices = (servicesRes.data || []).reduce((s, svc) => s + (svc.amount || 0), 0);
+    const businessAccounts = allAccounts.filter(a => !isMarketplace(a?.name));
+    const marketplaceAccounts = allAccounts.filter(a => isMarketplace(a?.name));
+    const totalBalance = businessAccounts.reduce((s, a) => s + num(a?.balance), 0);
+    const totalMarketplace = marketplaceAccounts.reduce((s, a) => s + num(a?.balance), 0);
+    const totalInvestments = (investmentsRes.data || []).reduce(
+      (s, i) => s + num(i?.shares) * (num(i?.current_price) || num(i?.purchase_price)),
+      0,
+    );
+    const totalDebtors = (debtorsRes.data || []).reduce((s, d) => s + num(d?.remaining_amount), 0) + totalMarketplace;
+    const monthSales = (salesRes.data || []).reduce((s, sale) => s + num(sale?.amount), 0);
+    const monthServices = (servicesRes.data || []).reduce((s, svc) => s + num(svc?.amount), 0);
     const monthIncome = monthSales + monthServices;
-    const expensesStill = (expensesRes.data || []).filter(e => e.category === "still").reduce((s, e) => s + e.amount, 0);
-    const expensesEdgar = (expensesRes.data || []).filter(e => e.category !== "still").reduce((s, e) => s + e.amount, 0);
-    const totalExpenses = (expensesRes.data || []).reduce((s, e) => s + e.amount, 0);
+    const expensesStill = (expensesRes.data || []).filter(e => e?.category === "still").reduce((s, e) => s + num(e?.amount), 0);
+    const expensesEdgar = (expensesRes.data || []).filter(e => e?.category !== "still").reduce((s, e) => s + num(e?.amount), 0);
+    const totalExpenses = (expensesRes.data || []).reduce((s, e) => s + num(e?.amount), 0);
 
     return {
       totalBalance,
