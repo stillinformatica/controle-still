@@ -15,9 +15,10 @@ export function mapKeys<T = any>(obj: any): T {
 }
 
 async function getUserId() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Não autenticado");
-  return user.id;
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
+  if (!userId) throw new Error("Não autenticado");
+  return userId;
 }
 
 function throwIfError(result: { error: any; data: any }) {
