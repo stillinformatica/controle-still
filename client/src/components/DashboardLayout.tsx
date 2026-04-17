@@ -130,6 +130,11 @@ function DashboardLayoutContent({
   });
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
+  const { isLoading: permissionsLoading } = usePermissions();
+
+  if (permissionsLoading || !user) {
+    return <DashboardLayoutSkeleton />;
+  }
 
   useEffect(() => {
     if (isCollapsed) {
