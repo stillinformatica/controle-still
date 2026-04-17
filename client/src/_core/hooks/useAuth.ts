@@ -52,7 +52,7 @@ export function useAuth() {
 
   const resolvedUser = profile ?? (supabaseUser ? mapSupabaseUserToFallbackProfile(supabaseUser) : null);
   const user = isSessionReady ? resolvedUser : null;
-  const loading = !isSessionReady || (!!supabaseUser && isProfileLoading);
+  const loading = !isSessionReady;
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
