@@ -23,12 +23,12 @@ export interface SectionPermission {
 }
 
 export function usePermissions() {
-  const { user } = useAuth();
+  const { user, isSessionReady } = useAuth();
 
   const { data: collabInfo, isLoading } = useQuery({
-    queryKey: ["myCollaboratorInfo"],
+    queryKey: ["myCollaboratorInfo", user?.id],
     queryFn: collaboratorsApi.myCollaboratorInfo,
-    enabled: !!user,
+    enabled: isSessionReady && !!user,
     staleTime: 30_000,
   });
 
@@ -56,7 +56,7 @@ export function usePermissions() {
   };
 
   return {
-    isLoading,
+    isLoading: !isSessionReady || isLoading,
     isCollaborator,
     getPermission,
     canAccess,

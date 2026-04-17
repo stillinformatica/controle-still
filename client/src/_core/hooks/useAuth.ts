@@ -17,35 +17,41 @@ function mapSupabaseUserToFallbackProfile(user: SupabaseUser) {
 
 export function useAuth() {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [isSessionReady, setIsSessionReady] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    let isMounted = true;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        if (!isMounted) return;
         setSupabaseUser(session?.user ?? null);
-        setAuthLoading(false);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
       setSupabaseUser(session?.user ?? null);
-      setAuthLoading(false);
+      setIsSessionReady(true);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const { data: profile, isLoading: isProfileLoading } = useQuery({
-    queryKey: ["profile"],
+    queryKey: ["profile", supabaseUser?.id],
     queryFn: authApi.getProfile,
-    enabled: !!supabaseUser,
+    enabled: isSessionReady && !!supabaseUser,
     staleTime: 30_000,
     retry: false,
   });
 
   const resolvedUser = profile ?? (supabaseUser ? mapSupabaseUserToFallbackProfile(supabaseUser) : null);
-  const loading = authLoading || (!!supabaseUser && isProfileLoading);
+  const loading = !isSessionReady || (!!supabaseUser && isProfileLoading);
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
@@ -66,6 +72,7 @@ export function useAuth() {
     user: resolvedUser,
     supabaseUser,
     loading,
+    isSessionReady,
     logout,
     signInWithGoogle,
   };
